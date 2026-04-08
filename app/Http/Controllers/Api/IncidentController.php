@@ -1,0 +1,154 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\Incident;
+use App\Models\IncidentStatus;
+use App\Models\School;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+
+class IncidentController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     */
+    public function index(Request $req): JsonResponse
+    {
+        $incidents = Incident::where('reported_by', Auth::user()->id)->latest()->get();
+
+        return response()->json($incidents);
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(Request $req): JsonResponse
+    {
+        $user = Auth::user();
+
+        $validated = $req->validate([
+            'category_id' => 'required|exists:incident_categories,id',
+            'incident_title' => 'required|string|max:255',
+            'description' => 'required|string',
+            'incident_datetime' => 'required|date_format:Y-m-d H:i:s',
+            'location' => 'nullable|string|max:255',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
+            'urgency_level' => 'nullable|integer',
+
+            'students' => 'nullable|array',
+            'students.*.student_id' => 'required_with:students|exists:students,id',
+            'students.*.involvement_type' => [
+                'required_with:students',
+                'string',
+                Rule::in(['Victim', 'Offender', 'Witness']),
+            ],
+            'students.*.notes' => 'nullable|string',
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+            $defaultStatus = IncidentStatus::where('status_name', 'Pending')->first();
+
+            if (!$defaultStatus) {
+                return response()->json([
+                    'message' => 'Default incident status "Pending" not found.'
+                ], 422);
+            }
+
+            // Create incident
+            $incident = Incident::create([
+                'school_id' => School::first()->id,
+                'reported_by' => $user->id,
+                'category_id' => $validated['category_id'],
+                'current_status_id' => $defaultStatus->id,
+                'incident_title' => $validated['incident_title'],
+                'description' => $validated['description'],
+                'incident_datetime' => $validated['incident_datetime'],
+                'location' => $validated['location'] ?? null,
+                'latitude' => $validated['latitude'] ?? null,
+                'longitude' => $validated['longitude'] ?? null,
+                'urgency_level' => $validated['urgency_level'] ?? 1,
+            ]);
+
+            // Attach involved students to pivot table
+            if (!empty($validated['students'])) {
+                $pivotData = [];
+
+                foreach ($validated['students'] as $student) {
+                    $pivotData[$student['student_id']] = [
+                        'involvement_type' => $student['involvement_type'],
+                        'notes' => $student['notes'] ?? null,
+                    ];
+                }
+
+                $incident->students()->attach($pivotData);
+            }
+
+            /* $incident->incident_updates()->create([
+                'updated_by' => $user->id,
+                'status_id' => $defaultStatus->id,
+                'note' => $validated['initial_update_note'] ?? 'Incident was created.',
+            ]); */
+
+            DB::commit();
+
+            $incident->load([
+                'category',
+                'current_status',
+                'students',
+            ]);
+
+            return response()->json([
+                'message' => 'Incident created successfully.',
+                'data' => $incident,
+            ], 201);
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'message' => 'Failed to create incident.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Display the specified resource.
+     */
+    public function show(string $id): JsonResponse
+    {
+        $incidents = Incident::with([
+            'students',
+            'user',
+            'user.parent_guardian',
+            'current_status',
+            'incident_updates',
+        ])->where('reported_by', Auth::user()->id)->findOrFail($id);
+
+        return response()->json($incidents);
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $req, string $id)
+    {
+        //
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(string $id)
+    {
+        //
+    }
+}

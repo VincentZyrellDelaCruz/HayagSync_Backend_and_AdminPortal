@@ -26,7 +26,7 @@ class IncidentSeeder extends Seeder
             ]);
         }
 
-        $statuses = ['New', 'Reviewing', 'Pending Action', 'Scheduled',
+        $statuses = ['Pending', 'Under Investigation' , 'Scheduled',
                     'Resolved', 'Unresolved', 'Cancelled'];
         $sort_order = 1;
 

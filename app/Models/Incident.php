@@ -62,10 +62,11 @@ class Incident extends Model
 
     public function incident_updates(): HasMany
     {
-        return $this->hasMany(IncidentStatus::class);
+        return $this->hasMany(IncidentUpdate::class, 'incident_id');
     }
 
-    public function ai_guidance(): HasOne {
+    public function ai_guidance(): HasOne
+    {
         return $this->hasOne(AiGuidance::class);
     }
 
