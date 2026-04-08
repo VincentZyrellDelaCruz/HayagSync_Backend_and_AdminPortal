@@ -34,6 +34,8 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, HasApiTokens, HasUuids, SoftDeletes;
 
+    protected $keyType = 'string';
+
     /**
      * Get the attributes that should be cast.
      *

@@ -39,6 +39,7 @@ class UserFactory extends Factory
             'gender' => fake()->randomElement(['Male', 'Female']),
             'birthdate' => fake()->dateTimeBetween('-60 years', '-20 years'),
             'email' => Str::lower($firstName[0]) . '.' . Str::replace(' ', '', Str::lower($lastName)) . '@neu.edu.ph',
+            'email_verified_at' => now(),
             'password' => '11111111',
             'phone_number' => fake()->phoneNumber(),
         ];
