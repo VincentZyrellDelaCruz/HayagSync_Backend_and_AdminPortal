@@ -202,7 +202,7 @@
                                     : 'Unknown Reporter';
                             @endphp
 
-                            <a href="{{ route('incidents.show', $incident->id) }}"
+                            <a href="{{ route('web.incidents.show', $incident->id) }}"
                                class="block px-5 py-4 {{ $rowClasses }}">
                                 <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
                                     {{-- Left Section --}}

@@ -108,7 +108,21 @@ class IncidentController extends Controller
      */
     public function show(string $id)
     {
-        //
+        $incident = Incident::with([
+            'user',
+            'category',
+            'students',
+            'latest_update.incident_status',
+            'latest_update.user.staff',
+            'incident_updates' => function ($query) {
+                $query->with([
+                    'incident_status',
+                    'user.staff',
+                ])->latest();
+            },
+        ])->findOrFail($id);
+
+        return view('incidents.incident', compact('incident'));
     }
 
     /**

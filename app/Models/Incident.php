@@ -45,6 +45,7 @@ class Incident extends Model
         return $this->belongsTo(IncidentCategory::class, 'category_id');
     }
 
+    // This was used for incident cases that recently reported, no staff intervention yet
     public function current_status(): BelongsTo
     {
         return $this->belongsTo(IncidentStatus::class, 'current_status_id');
@@ -63,6 +64,11 @@ class Incident extends Model
     public function incident_updates(): HasMany
     {
         return $this->hasMany(IncidentUpdate::class, 'incident_id');
+    }
+
+    public function latest_update(): HasOne
+    {
+        return $this->hasOne(IncidentUpdate::class, 'incident_id')->latestOfMany();
     }
 
     public function ai_guidance(): HasOne
