@@ -23,7 +23,7 @@ return new class extends Migration
             $table->string('location')->nullable();
             $table->decimal('latitude', 10, 8)->nullable();
             $table->decimal('longitude', 11, 8)->nullable();
-            $table->unsignedTinyInteger('urgency_level')->default(1);
+            $table->enum('urgency_level', ['Low', 'Medium', 'High', 'Critical'])->default('Low');
             $table->timestamps();
             $table->softDeletes();
         });

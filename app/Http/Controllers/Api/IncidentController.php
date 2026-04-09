@@ -39,7 +39,7 @@ class IncidentController extends Controller
             'location' => 'nullable|string|max:255',
             'latitude' => 'nullable|numeric|between:-90,90',
             'longitude' => 'nullable|numeric|between:-180,180',
-            'urgency_level' => 'nullable|integer',
+            'urgency_level' => 'nullable|string',
 
             'students' => 'nullable|array',
             'students.*.student_id' => 'required_with:students|exists:students,id',

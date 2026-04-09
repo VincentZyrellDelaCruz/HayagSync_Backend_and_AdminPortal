@@ -19,7 +19,7 @@ class ParentGuardianFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => User::latest()->first()->id,
+            'user_id' => User::oldest()->first()->id,
             'parent_code' => 'PG-' . str_pad(fake()->numberBetween(0, 999999), 6, '0', STR_PAD_LEFT),
             'occupation' => fake()->jobTitle(),
         ];
