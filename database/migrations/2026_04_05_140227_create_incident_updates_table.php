@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignUuid('incident_id')->constrained()->onDelete('cascade');
             $table->foreignUuid('updated_by')->constrained('users')->onDelete('cascade');
             $table->foreignId('status_id')->constrained('incident_statuses')->onDelete('cascade');
-            $table->text('note');
+            $table->text('note')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

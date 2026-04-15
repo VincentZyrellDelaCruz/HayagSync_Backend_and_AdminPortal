@@ -1,8 +1,9 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\IncidentCategoryController;
 use App\Http\Controllers\Api\IncidentController;
-use App\Models\Student;
+use App\Http\Controllers\Api\StudentParentGuardianController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -15,9 +16,16 @@ Route::get('/user', function (Request $request) {
 
 Route::middleware('auth:sanctum')->group(function() {
     Route::get('/profile', [AuthController::class, 'profile']);
-    Route::get('/logout', [AuthController::class, 'logout']);
+    Route::post('/logout', [AuthController::class, 'logout']);
+
+    Route::get('/categories', [IncidentCategoryController::class, 'showAllCategories']);
 
     Route::apiResource('/incidents', IncidentController::class);
+
+    Route::controller(StudentParentGuardianController::class)->group(function () {
+        Route::get('/students', 'showAllStudent');
+        Route::get('/parent/students', 'showAllRelatedStudent');
+    });
 });
 
 /* Testing API without token

@@ -17,9 +17,13 @@ class IncidentController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $req): JsonResponse
+    public function index(): JsonResponse
     {
-        $incidents = Incident::where('reported_by', Auth::user()->id)->latest()->get();
+        $incidents = Incident::with([
+            'category',
+            'latest_update',
+            'incident_evidences',
+        ])->where('reported_by', Auth::user()->id)->latest()->get();
 
         return response()->json($incidents);
     }
@@ -49,6 +53,11 @@ class IncidentController extends Controller
                 Rule::in(['Victim', 'Offender', 'Witness']),
             ],
             'students.*.notes' => 'nullable|string',
+
+            'evidences' => 'nullable|array',
+            'evidences.*' => 'file|mimes:jpg,jpeg,png,mp4,mov,avi|max:51200',
+            'captions' => 'nullable|array',
+            'captions.*' => 'nullable|string|max:255',
         ]);
 
         DB::beginTransaction();
@@ -91,6 +100,23 @@ class IncidentController extends Controller
                 $incident->students()->attach($pivotData);
             }
 
+            if ($req->hasFile('evidences')) {
+                foreach ($req->file('evidences') as $index => $file) {
+                    $path = $file->store('incident_evidences', 'public');
+
+                    $incident->incident_evidences()->create([
+                        'uploaded_by' => $user->id,
+                        'file_name' => $file->getClientOriginalName(),
+                        'file_path' => $path,
+                        'file_type' => $file->extension(),
+                        'file_size' => $file->getSize(),
+                        'mime_type' => $file->getMimeType(),
+                        'caption' => $validated['captions'][$index] ?? null,
+                        'hash_signature' => hash_file('sha256', $file->getRealPath()),
+                    ]);
+                }
+            }
+
             /* $incident->incident_updates()->create([
                 'updated_by' => $user->id,
                 'status_id' => $defaultStatus->id,
@@ -103,6 +129,7 @@ class IncidentController extends Controller
                 'category',
                 'current_status',
                 'students',
+                'incident_evidences',
             ]);
 
             return response()->json([
@@ -126,11 +153,9 @@ class IncidentController extends Controller
     public function show(string $id): JsonResponse
     {
         $incidents = Incident::with([
-            'students',
-            'user',
             'user.parent_guardian',
-            'current_status',
-            'incident_updates',
+            'students',
+            'latest_update',
         ])->where('reported_by', Auth::user()->id)->findOrFail($id);
 
         return response()->json($incidents);

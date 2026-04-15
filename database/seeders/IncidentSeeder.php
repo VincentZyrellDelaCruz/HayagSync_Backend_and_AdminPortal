@@ -5,7 +5,9 @@ namespace Database\Seeders;
 use App\Models\Incident;
 use App\Models\IncidentCategory;
 use App\Models\IncidentStatus;
+use App\Models\IncidentUpdate;
 use App\Models\Student;
+use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -44,6 +46,17 @@ class IncidentSeeder extends Seeder
         $incident->students()->attach([
             $students[0]->id => ['involvement_type' => 'Victim', 'notes' => 'Lorem Ipsum'],
             $students[1]->id => ['involvement_type' => 'Offender', 'notes' => null],
+        ]);
+
+        $incident = Incident::first()->id;
+        $user = User::first()->id;
+        $status = IncidentStatus::find(2)->id;
+
+        IncidentUpdate::create([
+            'incident_id' => $incident,
+            'updated_by' => $user,
+            'status_id' => $status,
+            'note' => 'lol,'
         ]);
 
     }

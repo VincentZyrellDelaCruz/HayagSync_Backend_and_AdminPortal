@@ -46,20 +46,22 @@ class AuthController extends Controller
             'message' => 'Login Success!',
             'token' => $token,
             'user' => $user,
-        ]);
+        ], 200);
     }
 
     public function profile(Request $req): JsonResponse
     {
-        return response()->json($req->user());
+        return response()->json($req->user(), 200);
     }
 
     public function logout(Request $req): JsonResponse
     {
         $req->user()->currentAccessToken()->delete();
 
+        $req->user()->tokens()->delete();
+
         return response()->json([
             'message' => 'Logout Success!'
-        ]);
+        ], 200);
     }
 }
