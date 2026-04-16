@@ -48,6 +48,7 @@ class IncidentSeeder extends Seeder
             $students[1]->id => ['involvement_type' => 'Offender', 'notes' => null],
         ]);
 
+        /* Just to show if the IncidentUpdate table works
         $incident = Incident::first()->id;
         $user = User::first()->id;
         $status = IncidentStatus::find(2)->id;
@@ -58,6 +59,7 @@ class IncidentSeeder extends Seeder
             'status_id' => $status,
             'note' => 'lol,'
         ]);
+        */
 
     }
 }

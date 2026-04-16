@@ -1,4 +1,34 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+## To Migrate All Tables Inside Database with Seeding
+```bash 
+php artisan migrate --seed # First time run migration
+php artisan migrate:fresh --seed # Drops all existing tables and then re-run migration
+```
+
+## To Run Backend Server
+```bash
+php artisan serve --host=0.0.0.0 --port=8000
+```
+```bash
+npm run dev
+```
+
+## For vite.config.js
+- You need to change this part
+```js
+server: {
+    host: '0.0.0.0',   // allow LAN access
+    port: 5173,
+    hmr: {
+        host: "Your PC's IP address",
+    },   // or any port you prefer
+},
+```
+
+> __Note:__ You need to run this so that the api works on both physical and emulated android phone (flutter) 
+
+> __Also Note:__ Be sure if alpineJS and tailwind (Breeze) work by checking plugins in vite.config.js, tailwind.config.js, and both css/app.css and js/app.js
+
+<!-- <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
 <p align="center">
 <a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
@@ -56,3 +86,4 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+ -->

@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Enrollment;
+use App\Models\Incident;
 use App\Models\School;
 use App\Models\SchoolYear;
 use App\Models\Student;
@@ -36,5 +37,8 @@ class DatabaseSeeder extends Seeder
 
         Enrollment::factory(1)->create();
 
+        $this->call(StaffSeeder::class);
+        $this->call(ParentSeeder::class);
+        $this->call(IncidentSeeder::class);
     }
 }
