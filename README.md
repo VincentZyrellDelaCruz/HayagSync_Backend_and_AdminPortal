@@ -1,3 +1,7 @@
+# HayagSync Backend and Personnel/Admin Portal System
+
+This serves as the backend support for flutter mobile application incident support for private school bullying documentation and reporting. It also serves as a web portal for higher authority for managing incidents and taking actions.
+
 ## To Migrate All Tables Inside Database with Seeding
 ```bash 
 php artisan migrate --seed # First time run migration
