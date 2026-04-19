@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class IncidentController extends Controller
@@ -22,7 +23,6 @@ class IncidentController extends Controller
         $incidents = Incident::with([
             'category',
             'latest_update',
-            'incident_evidences',
         ])->where('reported_by', Auth::user()->id)->latest()->get();
 
         return response()->json($incidents);
@@ -102,7 +102,14 @@ class IncidentController extends Controller
 
             if ($req->hasFile('evidences')) {
                 foreach ($req->file('evidences') as $index => $file) {
-                    $path = $file->store('incident_evidences', 'public');
+                    $mime_type = $file->getMimeType();
+
+                    if (Str::startsWith($mime_type, 'image/')) {
+                        $path = $file->store('incident_evidences/images', 'public');
+                    }
+                    elseif (Str::startsWith($mime_type, 'video/')) {
+                        $path = $file->store('incident_evidences/videos', 'public');
+                    }
 
                     $incident->incident_evidences()->create([
                         'uploaded_by' => $user->id,
@@ -110,7 +117,7 @@ class IncidentController extends Controller
                         'file_path' => $path,
                         'file_type' => $file->extension(),
                         'file_size' => $file->getSize(),
-                        'mime_type' => $file->getMimeType(),
+                        'mime_type' => $mime_type,
                         'caption' => $validated['captions'][$index] ?? null,
                         'hash_signature' => hash_file('sha256', $file->getRealPath()),
                     ]);
@@ -156,6 +163,7 @@ class IncidentController extends Controller
             'user.parent_guardian',
             'students',
             'latest_update',
+            'incident_evidences'
         ])->where('reported_by', Auth::user()->id)->findOrFail($id);
 
         return response()->json($incidents);

@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\IncidentCategoryController;
 use App\Http\Controllers\Api\IncidentController;
+use App\Http\Controllers\Api\MediaController;
 use App\Http\Controllers\Api\StudentParentGuardianController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -26,6 +27,8 @@ Route::middleware('auth:sanctum')->group(function() {
         Route::get('/students', 'showAllStudent');
         Route::get('/parent/students', 'showAllRelatedStudent');
     });
+
+    Route::get('/media/{path}', [MediaController::class, 'show']);
 });
 
 /* Testing API without token
