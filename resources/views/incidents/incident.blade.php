@@ -38,7 +38,7 @@
             : null;
     @endphp
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div x-data="{ openModal: false }" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {{-- Back --}}
         <div class="mb-6">
             <a href="{{ route('web.incidents.index') }}"
@@ -85,6 +85,45 @@
                             {{ $incident->created_at->format('M d, Y') }}
                         </p>
                         <p>{{ $incident->created_at->format('h:i A') }}</p>
+
+                        @if (!in_array($incident->current_status->status_name, ['Cancelled', 'Resolved', 'Dismissed']))
+                            <button
+                                class="mt-3 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                                @click="openModal = true">
+                                Update Status
+                            </button>
+
+                            <div x-show="openModal" x-cloak
+                                class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+
+                                <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6 relative">
+                                    <button class="absolute top-2 right-2 text-gray-600"
+                                            @click="openModal = false">&times;</button>
+
+                                    <h2 class="text-lg font-semibold mb-4">Update Status</h2>
+
+                                    <form action="{{ route('web.incidents.update', $incident->id) }}" method="POST">
+                                        @csrf
+                                        @method('PUT')
+
+                                        <select name="status_id" class="w-full border rounded px-3 py-2 mb-4">
+                                            @foreach ($statuses as $stat)
+                                                <option value="{{ $stat->id }}">{{ $stat->status_name }}</option>
+                                            @endforeach
+                                        </select>
+
+                                        <textarea name="note" rows="3"
+                                            class="w-full border rounded px-3 py-2 mb-4"></textarea>
+
+                                        <button type="submit"
+                                            class="px-4 py-2 bg-blue-600 text-white rounded">
+                                            Update and Submit
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        @endif
+
                     </div>
                 </div>
             </div>
@@ -121,6 +160,43 @@
                             <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Location</p>
                             <p class="text-sm text-slate-800">{{ $incident->location ?? 'Not specified' }}</p>
                         </div>
+                    </div>
+                </div>
+
+                {{-- Evidences --}}
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 bg-slate-50">
+                        <h2 class="text-sm font-semibold text-slate-700">Evidences</h2>
+                    </div>
+
+                    <div class="p-6">
+                        @if($incident->incident_evidences->isNotEmpty())
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                @foreach ($incident->incident_evidences as $evidence)
+                                    <div
+                                        class="cursor-pointer rounded overflow-hidden shadow hover:opacity-80"
+                                        x-data
+                                        @click="$dispatch('open-modal', {
+                                            type: '{{ Str::startsWith($evidence->mime_type, 'image/') ? 'image' : 'video' }}',
+                                            src: '{{ asset('storage/' . $evidence->file_path) }}',
+                                            mime: '{{ $evidence->mime_type }}'
+                                        })"
+                                    >
+                                        @if (Str::startsWith($evidence->mime_type, 'image/'))
+                                            <img src="{{ asset('storage/' . $evidence->file_path) }}"
+                                                alt="{{ $evidence->file_name }}"
+                                                class="w-full h-40 object-cover">
+                                        @elseif (Str::startsWith($evidence->mime_type, 'video/'))
+                                            <video class="w-full h-40 object-cover" muted>
+                                                <source src="{{ asset('storage/' . $evidence->file_path) }}" type="{{ $evidence->mime_type }}">
+                                            </video>
+                                        @endif
+                                    </div>
+                                @endforeach
+                            </div>
+                        @else
+                            <p class="text-sm text-slate-500">No evidence (image/video) provided for this incident.</p>
+                        @endif
                     </div>
                 </div>
 
@@ -440,4 +516,23 @@
             </aside>
         </div>
     </div>
+
+    <div x-data="{ open: false, type: '', src: '', mime: '' }"
+        @open-modal.window="open = true; type = $event.detail.type; src = $event.detail.src; mime = $event.detail.mime"
+        x-show="open"
+        class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-50"
+        style="display:none;">
+        <div class="bg-white rounded-lg shadow-lg max-w-3xl w-full p-4 relative">
+            <button class="absolute top-2 right-2 text-gray-600" @click="open = false">&times;</button>
+
+            <template x-if="type === 'image'">
+                <img :src="src" alt="Evidence" class="w-full max-h-[80vh] object-contain">
+            </template>
+
+            <template x-if="type === 'video'">
+                <video :src="src" :type="mime" controls autoplay class="w-full max-h-[80vh]"></video>
+            </template>
+        </div>
+    </div>
+
 @endsection

@@ -162,7 +162,7 @@ class IncidentController extends Controller
         $incidents = Incident::with([
             'user.parent_guardian',
             'students',
-            'latest_update',
+            'latest_update.incident_status',
             'incident_evidences'
         ])->where('reported_by', Auth::user()->id)->findOrFail($id);
 

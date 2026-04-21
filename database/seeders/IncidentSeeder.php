@@ -19,7 +19,7 @@ class IncidentSeeder extends Seeder
      */
     public function run(): void
     {
-        /* $categories = ['Physical Bullying', 'Social Bullying', 'Verbal Bullying',
+        $categories = ['Physical Bullying', 'Social Bullying', 'Verbal Bullying',
                     'Cyberbullying', 'Religious Bullying', 'Sexual Bullying', 'Racial Bullying'];
 
         foreach ($categories as $category) {
@@ -29,7 +29,7 @@ class IncidentSeeder extends Seeder
         }
 
         $statuses = ['Pending', 'Under Investigation' , 'Scheduled',
-                    'Resolved', 'Unresolved', 'Cancelled'];
+                    'Resolved', 'Cancelled', 'Dismissed'];
         $sort_order = 1;
 
         foreach ($statuses as $status) {
@@ -46,7 +46,7 @@ class IncidentSeeder extends Seeder
         $incident->students()->attach([
             $students[0]->id => ['involvement_type' => 'Victim', 'notes' => 'Lorem Ipsum'],
             $students[1]->id => ['involvement_type' => 'Offender', 'notes' => null],
-        ]); */
+        ]);
 
         /* Just to show if the IncidentUpdate table works
         $incident = Incident::find('http://127.0.0.1:8000/api/incidents/019da109-7c83-713a-af35-25a7562c7c23');
