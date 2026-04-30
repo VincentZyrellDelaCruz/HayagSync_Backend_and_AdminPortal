@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'fcm' => [
+        'credentials' => storage_path(
+            'app/hayagsync-firebase-adminsdk-fbsvc-3e8bb3f5b3.json'
+        ),
+        'project_id' => env('FIREBASE_PROJECT_ID'),
+    ],
+
 ];

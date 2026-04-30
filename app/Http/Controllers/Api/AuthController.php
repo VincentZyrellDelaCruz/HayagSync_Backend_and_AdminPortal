@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\DeviceToken;
 use App\Models\ParentGuardian;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -21,6 +22,7 @@ class AuthController extends Controller
         $req->validate([
             'email' => 'required|email',
             'password' => 'required',
+            'device_token' => 'nullable|string',
         ]);
 
         if (!Auth::attempt($req->only('email', 'password'))) {
@@ -42,6 +44,15 @@ class AuthController extends Controller
 
         $token = $user->createToken('flutter-token')->plainTextToken;
 
+        if ($req->filled('device_token')) {
+            $user->device_tokens()->delete();
+
+            DeviceToken::updateOrCreate([
+                'user_id' => $user->id,
+                'token' => $req->input('device_token'),
+            ]);
+        }
+
         return response()->json([
             'message' => 'Login Success!',
             'token' => $token,
@@ -58,7 +69,7 @@ class AuthController extends Controller
     {
         $req->user()->currentAccessToken()->delete();
 
-        $req->user()->tokens()->delete();
+        $req->user()->device_tokens()->delete();
 
         return response()->json([
             'message' => 'Logout Success!'

@@ -83,4 +83,19 @@ class User extends Authenticatable
     {
         return $this->hasMany(DisciplinaryPost::class, 'created_by');
     }
+
+    public function device_tokens(): HasMany
+    {
+        return $this->hasMany(DeviceToken::class);
+    }
+
+    public function inbox_sender(): HasMany
+    {
+        return $this->hasMany(Inbox::class, 'sender_id');
+    }
+
+    public function inbox_receiver(): HasMany
+    {
+        return $this->hasMany(Inbox::class, 'receiver_id');
+    }
 }

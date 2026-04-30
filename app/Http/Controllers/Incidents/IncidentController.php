@@ -4,9 +4,14 @@ namespace App\Http\Controllers\Incidents;
 
 use App\Http\Controllers\Controller;
 use App\Mail\IncidentMail;
+use App\Models\DeviceToken;
+use App\Models\Inbox;
 use App\Models\Incident;
 use App\Models\IncidentCategory;
 use App\Models\IncidentStatus;
+use App\Services\FcmService;
+use Google\Client;
+use Google\Service\FirebaseCloudMessaging;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
@@ -204,6 +209,29 @@ class IncidentController extends Controller
 
         Mail::to($incident->user->email)
             ->send(new IncidentMail($incident, $recipient, $status, $sender, $note));
+
+        Inbox::create([
+            'sender_id'   => $sender->id,
+            'receiver_id' => $incident->user->id,
+            'title'       => "Incident Update: {$status}",
+            'message'     => $note,
+        ]);
+
+        $deviceTokens = DeviceToken::where('user_id', $incident->user->id)
+            ->pluck('token')->toArray();
+
+        if (!empty($deviceTokens)) {
+            $fcm = new FcmService();
+            $fcm->send(
+                $deviceTokens,
+                "Incident Update: {$status}",
+                $note ?? 'Please check your inbox for details.',
+                [
+                    'incident_id' => (string) $incident->id,
+                    'status'      => $status,
+                ]
+            );
+        }
 
         return true;
 
