@@ -15,6 +15,9 @@ php artisan serve --host=0.0.0.0 --port=8000
 ```bash
 npm run dev
 ```
+```bash
+php artisan queue:work
+```
 
 ## For vite.config.js
 - You need to change this part

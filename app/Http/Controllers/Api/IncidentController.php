@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\GenerateAiParentingSupportJob;
 use App\Models\Incident;
 use App\Models\IncidentStatus;
 use App\Models\School;
+use App\Services\GeminiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -15,6 +17,14 @@ use Illuminate\Validation\Rule;
 
 class IncidentController extends Controller
 {
+
+    protected GeminiService $gemini;
+
+    public function __construct(GeminiService $gemini)
+    {
+        $this->gemini = $gemini;
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -132,11 +142,14 @@ class IncidentController extends Controller
 
             DB::commit();
 
+            GenerateAiParentingSupportJob::dispatch($incident->id);
+
             $incident->load([
                 'category',
                 'current_status',
                 'students',
                 'incident_evidences',
+                'ai_guidance',
             ]);
 
             return response()->json([
