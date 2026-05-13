@@ -20,7 +20,7 @@
                         {{ __('Incidents') }}
                     </x-nav-link>
 
-                    <x-nav-link :href="route('web.staffs.index')" :active="request()->routeIs('web.staffs.index')">
+                    <x-nav-link :href="route('web.users.index')" :active="request()->routeIs('web.users.index')">
                         {{ __('Users') }}
                     </x-nav-link>
 

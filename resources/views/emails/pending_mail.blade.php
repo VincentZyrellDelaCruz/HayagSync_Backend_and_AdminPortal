@@ -5,7 +5,7 @@
     <title>Incident Notification</title>
 </head>
 <body>
-    <p>Hello {{$gender === 'Male' ? 'Mr' : 'Ms/Mrs.'}} {{ $lastname }},</p>
+    <p>Hello {{$gender === 'Male' ? 'Mr.' : 'Ms/Mrs.'}} {{ $lastname }},</p>
 
     @if ($status === 'Approved')
         <p>

@@ -3,6 +3,7 @@
 use App\Http\Controllers\Incidents\IncidentController;
 use App\Http\Controllers\PendingController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\UserController;
 use App\Http\Controllers\Users\StaffController;
 use Illuminate\Support\Facades\Route;
 
@@ -36,7 +37,11 @@ Route::middleware(['auth', 'staff_only'])->group(function () {
         'destroy' => 'web.pendings.destroy',
     ]);
 
-    Route::prefix('/users')->group(function () {
+    Route::get('/staff/data', [UserController::class, 'getStaff'])->name('user.staff.data');
+    Route::get('/parent/data', [UserController::class, 'getParentGuardian'])->name('user.parent.data');
+    Route::get('/users', [UserController::class, 'index'])->name('web.users.index');
+
+    /* Route::prefix('/users')->group(function () {
         Route::get('staffs/data', [StaffController::class, 'getStaff'])->name('staff.data');
         Route::resource('/staffs', StaffController::class)->names([
             'index'   => 'web.staffs.index',
@@ -58,7 +63,7 @@ Route::middleware(['auth', 'staff_only'])->group(function () {
             'update'  => 'web.parent_guardians.update',
             'destroy' => 'web.parent_guardians.destroy',
         ]);
-    });
+    }); */
 });
 
 require __DIR__.'/auth.php';

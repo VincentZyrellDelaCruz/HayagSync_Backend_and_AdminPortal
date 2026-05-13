@@ -176,7 +176,8 @@ class IncidentController extends Controller
             'user.parent_guardian',
             'students',
             'latest_update.incident_status',
-            'incident_evidences'
+            'incident_evidences',
+            'ai_guidance',
         ])->where('reported_by', Auth::user()->id)->findOrFail($id);
 
         return response()->json($incidents);

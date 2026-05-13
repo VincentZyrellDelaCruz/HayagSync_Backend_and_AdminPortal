@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AiParentalSupportController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\InboxController;
 use App\Http\Controllers\Api\IncidentCategoryController;
 use App\Http\Controllers\Api\IncidentController;
 use App\Http\Controllers\Api\MediaController;
@@ -37,6 +38,9 @@ Route::middleware('auth:sanctum')->group(function() {
         Route::get('/students', 'showAllStudent');
         Route::get('/parent/students', 'showAllRelatedStudent');
     });
+
+    Route::get('/inbox', [InboxController::class, 'index']);
+    Route::get('/inbox/{id}', [InboxController::class, 'show']);
 
     Route::get('/media/{path}', [MediaController::class, 'show']);
 });
