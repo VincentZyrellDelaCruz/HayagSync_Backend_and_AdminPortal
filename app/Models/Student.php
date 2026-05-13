@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
@@ -41,5 +42,10 @@ class Student extends Model
     public function incidents(): BelongsToMany
     {
         return $this->belongsToMany(Incident::class)->withPivot('involvement_type', 'notes');
+    }
+
+    public function pending_users(): HasMany
+    {
+        return $this->hasMany(PendingRegistration::class);
     }
 }

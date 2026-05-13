@@ -14,6 +14,7 @@ class AiGuidance extends Model
 
     protected $fillable = [
         'incident_id',
+        'tips_title',
         'generated_text',
     ];
 

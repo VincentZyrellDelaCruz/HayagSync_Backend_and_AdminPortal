@@ -17,12 +17,12 @@ class IncidentMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public Incident $incident;
-    public String $status;
-    public String $recipient;
-    public User $sender;
-    public String $type;
-    public String $note;
+    protected Incident $incident;
+    protected String $status;
+    protected String $recipient;
+    protected User $sender;
+    protected String $type;
+    protected String $note;
     // public String $reason;
 
     /**

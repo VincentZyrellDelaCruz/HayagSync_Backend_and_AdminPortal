@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Incidents\IncidentController;
+use App\Http\Controllers\PendingController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Users\StaffController;
 use Illuminate\Support\Facades\Route;
@@ -26,6 +27,13 @@ Route::middleware(['auth', 'staff_only'])->group(function () {
         'edit'    => 'web.incidents.edit',
         'update'  => 'web.incidents.update',
         'destroy' => 'web.incidents.destroy',
+    ]);
+
+    Route::resource('/pendings', PendingController::class)->names([
+        'index'   => 'web.pendings.index',
+        'show'    => 'web.pendings.show',
+        'update'  => 'web.pendings.update',
+        'destroy' => 'web.pendings.destroy',
     ]);
 
     Route::prefix('/users')->group(function () {

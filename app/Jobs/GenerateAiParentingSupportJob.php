@@ -32,6 +32,8 @@ class GenerateAiParentingSupportJob implements ShouldQueue
 
             if (!$incident) return;
 
+            $tips_title = 'Parenting support tips for your child related to "' . $incident->incident_title . '"';
+
             $parenting_tips = $gemini->generateParentalSupport(
                 $incident->category->category_name,
                 $incident->incident_title,
@@ -43,6 +45,7 @@ class GenerateAiParentingSupportJob implements ShouldQueue
                     'incident_id' => $incident->id,
                 ],
                 [
+                    'tips_title' => $tips_title,
                     'generated_text' => $parenting_tips,
                 ]
             );

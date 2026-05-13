@@ -11,13 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('ai_guidances', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->foreignUuid('incident_id')->constrained()->onDelete('cascade');
-            $table->string('tips_title');
-            $table->text('generated_text');
+        Schema::create('otp_verifications', function (Blueprint $table) {
+            $table->id();
+            $table->string('email')->unique();
+            $table->string('otp_code')->nullable();
+            $table->timestamp('expires_at')->nullable();
             $table->timestamps();
-            $table->softDeletes();
         });
     }
 
@@ -26,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('ai_guidances');
+        Schema::dropIfExists('otp_verifications');
     }
 };
