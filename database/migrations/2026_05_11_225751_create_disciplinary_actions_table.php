@@ -11,14 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('meetings', function (Blueprint $table) {
+        Schema::create('disciplinary_actions', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('report_id')->constrained('reports')->onDelete('cascade');
-            $table->foreignUuid('scheduled_by')->constrained('users')->onDelete('cascade');
-            $table->dateTime('meeting_date');
+            $table->foreignUuid('student_id')->constrained('students')->onDelete('cascade');
+            $table->foreignUuid('staff_id')->references('user_id')->on('staff')->onDelete('cascade');
+            $table->string('discipline_action');
             $table->text('notes')->nullable();
-            // $table->string('meeting_type'); // Virtual, In-Person
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 
@@ -27,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('meetings');
+        Schema::dropIfExists('disciplinary_actions');
     }
 };

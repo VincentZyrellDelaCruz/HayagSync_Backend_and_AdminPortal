@@ -12,27 +12,41 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
+            $table->uuid('id')->primary();
+            $table->string('first_name');
+            $table->string('last_name');
+            $table->string('middle_name')->nullable();
+            $table->string('suffix')->nullable();
+            $table->enum('gender', ['Male', 'Female', 'Others']);
+            $table->date('birthdate');
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-
-            // Custom Roles and student links
-            $table->enum('role', ['parent', 'adviser', 'principal', 'ministrong_tagasubaybay', 'osd'])->default('parent');
-            $table->string('avatar_url')->nullable();
-
-            // For advisers
-            $table->string('assigned_section')->nullable();
-
-            // For verified parents
-            $table->string('student_name')->nullable();
-            $table->string('student_grade')->nullable();
-            $table->string('student_section')->nullable();
-            $table->string('academic_year')->nullable();
-
+            $table->string('phone_number')->nullable();
+            $table->string('profile_image_url')->nullable();
+            $table->string('status')->default('Active');
             $table->rememberToken();
             $table->timestamps();
+            $table->softDeletes();
+
+            // Custom Roles and student links
+           /*  $table->enum('role', ['parent', 'adviser', 'principal', 'ministrong_tagasubaybay', 'osd'])->default('parent');
+            $table->string('avatar_url')->nullable(); */
+
+            // For advisers
+            // $table->string('assigned_section')->nullable();
+
+            // For verified parents
+            /* $table->string('student_name')->nullable();
+            $table->string('student_grade')->nullable();
+            $table->string('student_section')->nullable();
+            $table->string('academic_year')->nullable(); */
+        });
+
+        Schema::create('password_reset_tokens', function (Blueprint $table) {
+            $table->string('email')->primary();
+            $table->string('token');
+            $table->timestamp('created_at')->nullable();
         });
 
         Schema::create('sessions', function (Blueprint $table) {
@@ -51,6 +65,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('users');
+        Schema::dropIfExists('password_reset_tokens');
         Schema::dropIfExists('sessions');
     }
 };

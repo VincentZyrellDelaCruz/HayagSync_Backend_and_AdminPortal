@@ -2,22 +2,22 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Meeting extends Model
 {
-    use HasFactory;
+    use HasFactory, HasUuids;
 
     protected $fillable = [
         'report_id',
-        'scheduled_by_user_id',
-        'scheduled_by_user_name',
-        'scheduled_by_user_role',
+        'scheduled_by',
         'meeting_date',
         'notes',
-        'meeting_type',
+        // 'meeting_type',
     ];
 
     protected $casts = [
@@ -26,15 +26,15 @@ class Meeting extends Model
 
     public function report(): BelongsTo
     {
-        return $this->belongsTo(Report::class);
+        return $this->belongsTo(Report::class, 'report_id');
     }
 
-    public function scheduler()
+    public function scheduler(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'scheduled_by_user_id');
+        return $this->belongsTo(User::class, 'scheduled_by');
     }
 
-    public function chatMessages()
+    public function chatMessages(): HasMany
     {
         return $this->hasMany(ChatMessage::class);
     }

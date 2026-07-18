@@ -183,7 +183,7 @@ class AuthController extends Controller
     private function normalizeForMatching($text)
     {
         $text = strtolower(trim($text));
-        
+
         // Handle "Last, First" format by reversing it
         if (str_contains($text, ',')) {
             $parts = explode(',', $text);
@@ -223,23 +223,23 @@ class AuthController extends Controller
 
         $matchedCount = 0;
         $usedKeys2 = [];
-        
+
         foreach ($words1 as $w1) {
             foreach ($words2 as $k2 => $w2) {
                 if (in_array($k2, $usedKeys2)) {
                     continue;
                 }
-                
+
                 if ($w1 === $w2) {
                     $matchedCount++;
                     $usedKeys2[] = $k2;
                     break;
                 }
-                
+
                 $dist = levenshtein($w1, $w2);
                 $maxLen = max(strlen($w1), strlen($w2));
                 $allowedDist = $maxLen <= 4 ? 1 : 2;
-                
+
                 if ($dist <= $allowedDist) {
                     $matchedCount++;
                     $usedKeys2[] = $k2;
@@ -247,7 +247,7 @@ class AuthController extends Controller
                 }
             }
         }
-        
+
         $minRequired = min(2, count($words1), count($words2));
         return $matchedCount >= $minRequired && $matchedCount >= (min(count($words1), count($words2)) * 0.7);
     }
@@ -256,30 +256,30 @@ class AuthController extends Controller
     {
         $s1 = $this->normalizeForMatching($sec1);
         $s2 = $this->normalizeForMatching($sec2);
-        
+
         if ($s1 === $s2) {
             return true;
         }
-        
+
         // Remove 'grade' word to compare section identifier
         $s1 = str_replace('grade', '', $s1);
         $s2 = str_replace('grade', '', $s2);
-        
+
         // Remove spaces
         $s1 = str_replace(' ', '', $s1);
         $s2 = str_replace(' ', '', $s2);
-        
+
         if ($s1 === $s2) {
             return true;
         }
-        
+
         // Fuzzy match on section
         $dist = levenshtein($s1, $s2);
         $maxLen = max(strlen($s1), strlen($s2));
         if ($maxLen > 0 && (1 - $dist / $maxLen) >= 0.8) {
             return true;
         }
-        
+
         return false;
     }
 

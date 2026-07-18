@@ -11,14 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('meetings', function (Blueprint $table) {
-            $table->uuid('id')->primary();
+        Schema::create('report_student', function (Blueprint $table) {
+            $table->id();
             $table->foreignUuid('report_id')->constrained('reports')->onDelete('cascade');
-            $table->foreignUuid('scheduled_by')->constrained('users')->onDelete('cascade');
-            $table->dateTime('meeting_date');
+            $table->foreignUuid('student_id')->constrained('students')->onDelete('cascade');
+            $table->string('involvement_type');
             $table->text('notes')->nullable();
-            // $table->string('meeting_type'); // Virtual, In-Person
-            $table->timestamps();
         });
     }
 
@@ -27,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('meetings');
+        Schema::dropIfExists('report_student');
     }
 };

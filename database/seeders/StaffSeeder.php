@@ -2,6 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Models\Position;
+use App\Models\Staff;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -13,6 +15,33 @@ class StaffSeeder extends Seeder
      */
     public function run(): void
     {
+
+        $users = User::orderBy('name', 'asc')->limit(9)->get();
+
+        foreach ($users as $user) {
+            Staff::create([
+                'user_id' => $user->id,
+                'staff_number' => fake()->numberBetween(10, 20) . str_pad(fake()->unique()->numberBetween(0, 9999), 4, '0', STR_PAD_LEFT),
+            ]);
+        }
+
+        $positions = ['Teacher', 'Principal', 'Ministrong Tagasubaybay', 'OSD Officer'];
+
+        foreach ($positions as $position) {
+            Position::create([
+                'position_name' => $position,
+            ]);
+        }
+
+        $staffs = Staff::all();
+
+        foreach ($staffs as $staff) {
+            $staff->positions()->attach([
+                Position::inRandomOrder()->first()->id => ['assigned_at' => now()],
+            ]);
+        }
+
+        /*
         $password = Hash::make('HayagSync2026!');
 
         // Preload 12 Section Advisers matching Bolt.new section names and emails
@@ -65,7 +94,7 @@ class StaffSeeder extends Seeder
             'password' => $password,
             'role' => 'osd',
         ]);
-
+ */
     }
 }
 

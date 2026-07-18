@@ -11,12 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('chat_messages', function (Blueprint $table) {
+        Schema::create('activity_logs', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignUuid('meeting_id')->constrained('meetings')->onDelete('cascade');
-            $table->foreignUuid('sender_id')->constrained('users')->onDelete('cascade');
-            $table->text('message');
-            $table->boolean('is_read')->default(false);
+            $table->foreignUuid('user_id')->constrained()->onDelete('cascade');
+            $table->string('action_type');
+            $table->text('description')->nullable();
+            $table->string('module');
+            $table->string('record_id')->unique();
+            $table->string('ip_address');
             $table->timestamps();
             $table->softDeletes();
         });
@@ -27,6 +29,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('chat_messages');
+        Schema::dropIfExists('activity_logs');
     }
 };
