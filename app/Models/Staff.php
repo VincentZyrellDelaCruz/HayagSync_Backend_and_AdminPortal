@@ -21,7 +21,7 @@ class Staff extends Model
     protected $fillable = [
         'user_id',
         'staff_number',
-        'is_admiin'
+        'is_admin'
     ];
 
     public function user(): BelongsTo
@@ -42,6 +42,11 @@ class Staff extends Model
     public function disciplinary_actions(): HasMany
     {
         return $this->hasMany(DisciplinaryAction::class, 'staff_id');
+    }
+
+    public function latestPosition()
+    {
+        return $this->positions()->orderByDesc('staff_position.assigned_at')->first();
     }
 
     /*

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\StaffOnlyMIddleware;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -16,6 +17,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->api(prepend: [
             \Illuminate\Cookie\Middleware\EncryptCookies::class,
             \Illuminate\Session\Middleware\StartSession::class,
+        ]);
+
+        $middleware->alias([
+            'staff_only' => StaffOnlyMIddleware::class,
         ]);
 
         $middleware->validateCsrfTokens(except: [

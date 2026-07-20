@@ -16,7 +16,7 @@ class StaffSeeder extends Seeder
     public function run(): void
     {
 
-        $users = User::orderBy('name', 'asc')->limit(9)->get();
+        $users = User::orderBy('last_name', 'asc')->limit(9)->get();
 
         foreach ($users as $user) {
             Staff::create([

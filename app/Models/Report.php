@@ -72,12 +72,12 @@ class Report extends Model
 
     public function appeals(): HasMany
     {
-        return $this->masMany(ReportAppeal::class, 'report_id');
+        return $this->hasMany(ReportAppeal::class, 'report_id');
     }
 
     public function meetings(): HasMany
     {
-        return $this->masMany(Meeting::class, 'report_id');
+        return $this->hasMany(Meeting::class, 'report_id');
     }
 
 }

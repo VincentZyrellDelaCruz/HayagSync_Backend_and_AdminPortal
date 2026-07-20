@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('staff', function (Blueprint $table) {
             $table->foreignUuid('user_id')->primary()->constrained()->onDelete('cascade');
             $table->string('staff_number')->unique();
-            $table->boolean('is_admiin')->default(false);
+            $table->boolean('is_admin')->default(false);
             $table->timestamps();
             $table->softDeletes();
         });

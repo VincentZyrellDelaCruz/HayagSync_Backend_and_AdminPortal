@@ -17,7 +17,7 @@ class ParentSeeder extends Seeder
      */
     public function run(): void
     {
-        $user = User::orderBy('name', 'desc')->first()->id;
+        $user = User::orderBy('last_name', 'desc')->first()->id;
         $parent = ParentGuardian::create([
             'user_id' => $user,
             'parent_code' => strtoupper(Str::random(8)),
