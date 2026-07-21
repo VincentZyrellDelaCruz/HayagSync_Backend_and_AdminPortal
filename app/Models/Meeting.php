@@ -17,6 +17,7 @@ class Meeting extends Model
         'scheduled_by',
         'meeting_date',
         'notes',
+        'status',
         // 'meeting_type',
     ];
 

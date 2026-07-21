@@ -138,6 +138,7 @@ class ReportController extends Controller
                     'user.staff',
                 ])->latest();
             },
+            'meetings.scheduler',
         ]);
 
         $statuses = ReportStatus::whereNotIn('status_name', ['Pending', 'Under Investigation'])->get();
@@ -175,6 +176,7 @@ class ReportController extends Controller
                 'scheduled_by' => Auth::user()->id,
                 'meeting_date' => $req->input('meeting_datetime'),
                 'notes' => $validated['note'],
+                'status' => 'Active',
             ]);
         }
 

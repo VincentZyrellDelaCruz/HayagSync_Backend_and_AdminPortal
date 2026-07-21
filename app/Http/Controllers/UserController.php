@@ -26,9 +26,9 @@ class UserController extends Controller
                 $query->with('staff.positions')
                     ->whereHas('staff', fn($q) => $q->where('is_admin', true));
                 break;
-            case 'adviser':
+            case 'teacher':
                 $query->with('staff.positions')
-                    ->whereHas('staff.positions', fn($q) => $q->where('position_name', 'Adviser'));
+                    ->whereHas('staff.positions', fn($q) => $q->where('position_name', 'Teacher'));
                 break;
             case 'tagasubaybay':
                 $query->with('staff.positions')

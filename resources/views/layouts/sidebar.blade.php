@@ -29,11 +29,36 @@
             Report Management
         </a>
 
+        <a href="{{ route('web.students.index') }}"
+        class="block px-4 py-2 rounded
+                {{ request()->routeIs('web.students.*') ? 'bg-gray-900 text-white' : 'hover:bg-gray-700' }}">
+            Student Records
+        </a>
+
         <a href="{{ route('web.users.index') }}"
         class="block px-4 py-2 rounded
                 {{ request()->routeIs('web.users.*') ? 'bg-gray-900 text-white' : 'hover:bg-gray-700' }}">
-            User List
+            User Directory
         </a>
+
+        {{-- Admin Panel Accordion --}}
+        <div x-data="{ open: {{ request()->routeIs('web.activity_logs.*') ? 'true' : 'false' }} }">
+            <button @click="open = !open"
+                class="w-full text-left px-4 py-2 rounded hover:bg-gray-700 flex justify-between items-center">
+                Admin Panel
+                <svg :class="{'rotate-180': open}" class="w-4 h-4 transform transition-transform" fill="none"
+                    viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+            <div x-show="open" class="mt-2 space-y-1 pl-6">
+                <a href="{{ route('web.activity_logs.index') }}" class="block px-4 py-2 rounded
+                    {{ request()->routeIs('web.activity_logs.*') ? 'bg-gray-900 text-white' : 'hover:bg-gray-700' }}">
+                    Activity Log
+                </a>
+            </div>
+        </div>
 
         <a href="{{ route('profile.edit') }}"
         class="block px-4 py-2 rounded

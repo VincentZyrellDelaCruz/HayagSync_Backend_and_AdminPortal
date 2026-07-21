@@ -514,6 +514,105 @@
                     </div>
                 </div>
 
+                {{-- Meetings --}}
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                        <h2 class="text-sm font-semibold text-slate-700">Meetings</h2>
+                    </div>
+
+                    <div class="p-6 space-y-4 text-sm">
+                        @forelse($report->meetings as $meeting)
+                            @php
+                                $statusClasses = match ($meeting->status) {
+                                    'Active'   => 'bg-green-100 text-green-700',
+                                    'Canceled' => 'bg-red-100 text-red-700',
+                                    'Finished' => 'bg-blue-100 text-blue-700',
+                                    default    => 'bg-gray-100 text-gray-700',
+                                };
+                            @endphp
+
+                            <div x-data="{ openChat: false }" class="border rounded-lg p-4 space-y-3">
+                                {{-- Meeting Header --}}
+                                <div class="flex items-center justify-between">
+                                    <span class="font-medium text-slate-800">
+                                        {{ $meeting->meeting_date->format('M d, Y h:i A') }}
+                                    </span>
+                                    <span class="px-2.5 py-1 rounded-full text-xs font-medium {{ $statusClasses }}">
+                                        {{ $meeting->status }}
+                                    </span>
+                                </div>
+
+                                <p class="text-slate-600">
+                                    <span class="font-medium">Scheduled By:</span>
+                                    {{ $meeting->scheduler?->last_name }}, {{ $meeting->scheduler?->first_name }}
+                                </p>
+                                @if($meeting->notes)
+                                    <p class="text-slate-600">
+                                        <span class="font-medium">Notes:</span> {{ $meeting->notes }}
+                                    </p>
+                                @endif
+
+                                {{-- Action Buttons --}}
+                                @if($meeting->status === 'Active')
+                                    <div class="flex gap-2">
+                                        <form action="{{ route('web.meetings.update', [$meeting->id, 'cancel']) }}" method="POST">
+                                            @csrf @method('PUT')
+                                            <button type="submit" class="px-3 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700">
+                                                Cancel
+                                            </button>
+                                        </form>
+                                        <form action="{{ route('web.meetings.update', [$meeting->id, 'finish']) }}" method="POST">
+                                            @csrf @method('PUT')
+                                            <button type="submit" class="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700">
+                                                Finish
+                                            </button>
+                                        </form>
+                                    </div>
+                                @endif
+
+                                {{-- Chat Box --}}
+                                <div>
+                                    <button @click="openChat = !openChat"
+                                        class="mt-2 text-xs text-blue-600 hover:underline">
+                                        {{ $meeting->status === 'Active' ? 'Open Chat' : 'View Chat History' }}
+                                    </button>
+
+                                    <div x-show="openChat" class="mt-3 border rounded-lg bg-slate-50 p-3 max-h-64 overflow-y-auto space-y-2">
+                                        @forelse($meeting->chatMessages as $msg)
+                                            <div class="flex {{ $msg->sender_id === Auth::id() ? 'justify-end' : 'justify-start' }}">
+                                                <div class="max-w-xs px-3 py-2 rounded-lg text-sm
+                                                    {{ $msg->sender_id === Auth::id() ? 'bg-blue-600 text-white' : 'bg-gray-200 text-slate-800' }}">
+                                                    <p>{{ $msg->message }}</p>
+                                                    <span class="block text-[10px] mt-1 opacity-70">
+                                                        {{ $msg->created_at->format('h:i A') }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        @empty
+                                            <p class="text-xs text-slate-500">No messages yet.</p>
+                                        @endforelse
+                                    </div>
+
+                                    {{-- Message Input (only if Active) --}}
+                                    @if($meeting->status === 'Active')
+                                        <form action="{{ route('web.chat_messages.store', $meeting->id) }}" method="POST" class="mt-2 flex gap-2">
+                                            @csrf
+                                            <input type="text" name="message" placeholder="Type a message..."
+                                                class="flex-1 border rounded px-3 py-1 text-sm"
+                                                required>
+                                            <button type="submit" class="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700">
+                                                Send
+                                            </button>
+                                        </form>
+                                    @endif
+                                </div>
+                            </div>
+                        @empty
+                            <p class="text-slate-500">No meetings scheduled for this report.</p>
+                        @endforelse
+                    </div>
+                </div>
+
             </aside>
         </div>
     </div>

@@ -22,8 +22,8 @@
            class="px-4 py-2 rounded {{ $filter==='staff' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
            Staff
         </a>
-        <a href="{{ route('web.users.index', ['filter' => 'adviser']) }}"
-           class="px-4 py-2 rounded {{ $filter==='adviser' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
+        <a href="{{ route('web.users.index', ['filter' => 'teacher']) }}"
+           class="px-4 py-2 rounded {{ $filter==='teacher' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
            Adviser/Teacher
         </a>
         <a href="{{ route('web.users.index', ['filter' => 'tagasubaybay']) }}"

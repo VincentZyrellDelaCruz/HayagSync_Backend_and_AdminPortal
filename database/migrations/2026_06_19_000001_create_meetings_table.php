@@ -17,6 +17,7 @@ return new class extends Migration
             $table->foreignUuid('scheduled_by')->constrained('users')->onDelete('cascade');
             $table->dateTime('meeting_date');
             $table->text('notes')->nullable();
+            $table->enum('status', ['Active', 'Canceled', 'Finished']);
             // $table->string('meeting_type'); // Virtual, In-Person
             $table->timestamps();
         });
