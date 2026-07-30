@@ -1,57 +1,121 @@
 <x-guest-layout>
-    <!-- Session Status -->
-    <x-auth-session-status class="mb-4" :status="session('status')" />
 
-    <form method="POST" action="{{ route('login') }}">
-        @csrf
+    <div class="w-full max-w-md">
 
-        @if ($errors->any())
-            <div class="mb-4 rounded-lg bg-red-100 border border-red-400 text-red-700 px-4 py-3">
-                <ul>
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-slate-800">
+                HayagSync
+            </h1>
 
-        <!-- Email Address -->
-        <div>
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autofocus autocomplete="username" />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
+            <p class="mt-2 text-slate-500 text-sm">
+                Smart Mobile Incident Support Application
+            </p>
         </div>
 
-        <!-- Password -->
-        <div class="mt-4">
-            <x-input-label for="password" :value="__('Password')" />
+        <!-- Card -->
+        <div class="bg-white shadow-2xl rounded-2xl border border-gray-100 p-8">
 
-            <x-text-input id="password" class="block mt-1 w-full"
-                            type="password"
-                            name="password"
-                            required autocomplete="current-password" />
+            <!-- Session Status -->
+            <x-auth-session-status
+                class="mb-4"
+                :status="session('status')"
+            />
 
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
-        </div>
-
-        <!-- Remember Me -->
-        {{-- <div class="block mt-4">
-            <label for="remember_me" class="inline-flex items-center">
-                <input id="remember_me" type="checkbox" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" name="remember">
-                <span class="ms-2 text-sm text-gray-600">{{ __('Remember me') }}</span>
-            </label>
-        </div> --}}
-
-        <div class="flex items-center justify-end mt-4">
-            @if (Route::has('password.request'))
-                <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('password.request') }}">
-                    {{ __('Forgot your password?') }}
-                </a>
+            <!-- Validation Errors -->
+            @if ($errors->any())
+                <div class="mb-6 rounded-xl border border-red-200 bg-red-50 p-4">
+                    <ul class="list-disc list-inside text-sm text-red-600">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
             @endif
 
-            <x-primary-button class="ms-3">
-                {{ __('Log in') }}
-            </x-primary-button>
+            <form method="POST" action="{{ route('login') }}" class="space-y-6">
+                @csrf
+
+                <!-- Email -->
+                <div>
+                    <x-input-label
+                        for="email"
+                        :value="__('Email Address')"
+                        class="mb-2 font-medium"
+                    />
+
+                    <x-text-input
+                        id="email"
+                        class="block w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                        type="email"
+                        name="email"
+                        :value="old('email')"
+                        required
+                        autofocus
+                        autocomplete="username"
+                        placeholder="Enter your email"
+                    />
+
+                    <x-input-error
+                        :messages="$errors->get('email')"
+                        class="mt-2"
+                    />
+                </div>
+
+                <!-- Password -->
+                <div>
+                    <x-input-label
+                        for="password"
+                        :value="__('Password')"
+                        class="mb-2 font-medium"
+                    />
+
+                    <x-text-input
+                        id="password"
+                        class="block w-full rounded-xl border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                        type="password"
+                        name="password"
+                        required
+                        autocomplete="current-password"
+                        placeholder="Enter your password"
+                    />
+
+                    <x-input-error
+                        :messages="$errors->get('password')"
+                        class="mt-2"
+                    />
+                </div>
+
+                <!-- Forgot Password -->
+                @if (Route::has('password.request'))
+                    <div class="flex justify-end">
+                        <a
+                            href="{{ route('password.request') }}"
+                            class="text-sm text-blue-600 hover:text-blue-700 hover:underline"
+                        >
+                            Forgot Password?
+                        </a>
+                    </div>
+                @endif
+
+                <!-- Login Button -->
+                <div>
+                    <x-primary-button
+                        class="w-full justify-center rounded-xl py-3 bg-blue-600 hover:bg-blue-700 text-base font-semibold transition duration-200 shadow-lg"
+                    >
+                        Log In
+                    </x-primary-button>
+                </div>
+
+            </form>
+
         </div>
-    </form>
+
+        <!-- Footer -->
+        <div class="mt-6 text-center text-xs text-gray-500">
+            © {{ date('Y') }} HayagSync. All rights reserved.
+        </div>
+
+    </div>
+
 </x-guest-layout>

@@ -25,6 +25,7 @@
         <table class="min-w-full divide-y divide-slate-200">
             <thead class="bg-slate-50">
                 <tr>
+                    <th class="px-4 py-2 text-left text-xs font-semibold text-slate-600">Log ID</th>
                     <th class="px-4 py-2 text-left text-xs font-semibold text-slate-600">
                         <a href="{{ route('web.activity_logs.index', ['sort' => 'user_id', 'order' => $sortOrder === 'asc' ? 'desc' : 'asc', 'search' => $search]) }}">
                             User
@@ -37,7 +38,6 @@
                     </th>
                     <th class="px-4 py-2 text-left text-xs font-semibold text-slate-600">Description</th>
                     <th class="px-4 py-2 text-left text-xs font-semibold text-slate-600">Module</th>
-                    <th class="px-4 py-2 text-left text-xs font-semibold text-slate-600">Record ID</th>
                     <th class="px-4 py-2 text-left text-xs font-semibold text-slate-600">IP Address</th>
                     <th class="px-4 py-2 text-left text-xs font-semibold text-slate-600">
                         <a href="{{ route('web.activity_logs.index', ['sort' => 'created_at', 'order' => $sortOrder === 'asc' ? 'desc' : 'asc', 'search' => $search]) }}">
@@ -49,15 +49,19 @@
             <tbody class="divide-y divide-slate-200">
                 @forelse($logs as $log)
                     <tr class="hover:bg-slate-50">
+                        <td class="px-4 py-2 text-sm text-slate-600">{{ $log->id }}</td>
                         <td class="px-4 py-2 text-sm text-blue-600">
-                            <a href="{{ route('web.users.show', $log->user_id) }}">
-                                {{ $log->user?->last_name }}, {{ $log->user?->first_name }}
-                            </a>
+                            @if($log->user_id && $log->user)
+                                <a href="{{ route('web.users.show', $log->user_id) }}">
+                                    {{ $log->user->last_name }}, {{ $log->user->first_name }}
+                                </a>
+                            @else
+                                <span class="text-slate-500 italic">Unknown / Not Authenticated</span>
+                            @endif
                         </td>
                         <td class="px-4 py-2 text-sm text-slate-700">{{ $log->action_type }}</td>
                         <td class="px-4 py-2 text-sm text-slate-600">{{ $log->description }}</td>
                         <td class="px-4 py-2 text-sm text-slate-600">{{ $log->module }}</td>
-                        <td class="px-4 py-2 text-sm text-slate-600">{{ $log->record_id }}</td>
                         <td class="px-4 py-2 text-sm text-slate-600">{{ $log->ip_address }}</td>
                         <td class="px-4 py-2 text-sm text-slate-600">{{ $log->created_at->format('M d, Y h:i A') }}</td>
                     </tr>

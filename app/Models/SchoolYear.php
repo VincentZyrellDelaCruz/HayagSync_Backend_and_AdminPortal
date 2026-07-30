@@ -22,4 +22,9 @@ class SchoolYear extends Model
     {
         return $this->hasMany(GradeSection::class, 'school_year_id');
     }
+
+    public function ai_analysis(): HasMany
+    {
+        return $this->hasMany(AiAnalysis::class, 'school_year_id');
+    }
 }

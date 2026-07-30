@@ -98,6 +98,11 @@ class User extends Authenticatable
         return $this->HasMany(ReportAppeal::class, 'reviewed_by');
     }
 
+    public function login_history(): HasMany
+    {
+        return $this->hasMany(StaffLoginHistory::class);
+    }
+
     /**
      * Get meetings scheduled by this staff.
      */

@@ -1,12 +1,12 @@
 <?php
 
 use Illuminate\Http\Request;
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\ChatController;
-use App\Http\Controllers\DirectoryController;
-use App\Http\Controllers\MeetingController;
-use App\Http\Controllers\ReportController;
-use App\Http\Controllers\TimelineController;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ChatController;
+use App\Http\Controllers\Api\DirectoryController;
+use App\Http\Controllers\Api\MeetingController;
+use App\Http\Controllers\Api\ReportController;
+use App\Http\Controllers\Api\TimelineController;
 use Illuminate\Support\Facades\Route;
 
 // Public Authentication

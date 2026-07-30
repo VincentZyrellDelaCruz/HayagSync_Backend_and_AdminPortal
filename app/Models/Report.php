@@ -16,6 +16,11 @@ class Report extends Model
     /** @use HasFactory<\Database\Factories\ReportFactory> */
     use HasFactory, HasUuids, SoftDeletes;
 
+    protected $casts = [
+        'incident_date' => 'date',
+        'incident_time' => 'datetime',
+    ];
+
     protected $fillable = [
         'school_id',
         'reported_by',
