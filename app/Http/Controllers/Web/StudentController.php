@@ -12,17 +12,28 @@ class StudentController extends Controller
 {
     public function index(Request $request)
     {
-        $search = $request->get('search');
-        $grade = $request->get('grade');
-        $section = $request->get('section');
+        $search   = $request->get('search');
+        $grade    = $request->get('grade');
+        $section  = $request->get('section');
 
         $query = Student::with('grade_sections');
 
-        // Restrict Adviser to only their sections
+        // Restrict Adviser (Teacher) to only their sections
         $user = Auth::user();
         if ($user->staff && $user->staff->latestPosition()?->position_name === 'Teacher') {
-            $sectionIds = $user->staff->section_advisers->pluck('id');
-            $query->whereIn('grade_section_id', $sectionIds);
+            // Get all GradeSection IDs where this staff is the adviser
+            $sectionIds = GradeSection::where('adviser', $user->staff->id)
+                ->pluck('id')
+                ->toArray();
+
+            if (!empty($sectionIds)) {
+                $query->whereHas('grade_sections', function ($q) use ($user) {
+                    $q->where('adviser', $user->staff->id);
+                });
+            } else {
+                // If teacher has no advised sections, return empty result
+                $query->whereRaw('0 = 1');
+            }
         }
 
         // Apply filters

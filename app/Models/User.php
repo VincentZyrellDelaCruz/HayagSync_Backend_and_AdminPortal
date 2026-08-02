@@ -100,7 +100,12 @@ class User extends Authenticatable
 
     public function login_history(): HasMany
     {
-        return $this->hasMany(StaffLoginHistory::class);
+        return $this->hasMany(UserLoginHistory::class);
+    }
+
+    public function security_events(): HasMany
+    {
+        return $this->hasMany(SecurityEvent::class);
     }
 
     /**

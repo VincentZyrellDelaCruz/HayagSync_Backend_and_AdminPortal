@@ -28,6 +28,11 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        if (session('pending_otp')) {
+            
+            return redirect()->route('otp.select');
+        }
+
         return redirect()->intended(route('dashboard', absolute: false));
     }
 

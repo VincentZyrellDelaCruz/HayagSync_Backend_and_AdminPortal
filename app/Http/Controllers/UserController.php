@@ -2,54 +2,76 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\GradeSection;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Yajra\DataTables\Facades\DataTables;
 
 class UserController extends Controller
 {
     public function index(Request $request)
     {
-        $filter = $request->get('filter', 'parent_guardian'); // default to parent_guardian
+        $filter = $request->get('filter', 'parent_guardian'); // Default to parent_guardian
         $search = $request->get('search');
 
         $query = User::query();
 
+        // Role-based restrictions
+        $authUser = Auth::user();
+        $authPositions = $authUser->staff?->positions->pluck('position_name')->toArray() ?? [];
+
         switch ($filter) {
             case 'parent_guardian':
                 $query->with('parent_guardian')->whereHas('parent_guardian');
-                break;
+
+            // If current user is Teacher/Adviser, restrict to their advised GradeSections
+            if (in_array('Teacher', $authPositions)) {
+                $sectionIds = GradeSection::where('adviser', $authUser->staff->id)
+                    ->pluck('id')
+                    ->toArray();
+
+                if (!empty($sectionIds)) {
+                    $query->whereHas('parent_guardian.students', function ($q) use ($sectionIds) {
+                        $q->whereIn('grade_section_id', $sectionIds);
+                    });
+                }
+            }
+            break;
+
             case 'staff':
+                // Only allow if user is Principal, OSD Officer, or Ministrong Tagasubaybay
+                if (!array_intersect($authPositions, ['Principal', 'OSD Officer', 'Ministrong Tagasubaybay'])) {
+                    abort(403, 'Unauthorized to view staff list');
+                }
                 $query->with('staff.positions')->whereHas('staff');
                 break;
+
             case 'admin':
-                $query->with('staff.positions')
-                    ->whereHas('staff', fn($q) => $q->where('is_admin', true));
+                if ($authUser->staff?->is_admin) {
+                    $query->with('staff.positions')
+                        ->whereHas('staff', fn($q) => $q->where('is_admin', true));
+                } else {
+                    abort(403, 'Unauthorized to view admin list');
+                }
                 break;
+
             case 'teacher':
+                if (!in_array('Principal', $authPositions) && !in_array('OSD Officer', $authPositions)) {
+                    abort(403, 'Unauthorized to view teacher list');
+                }
                 $query->with('staff.positions')
                     ->whereHas('staff.positions', fn($q) => $q->where('position_name', 'Teacher'));
                 break;
-            case 'tagasubaybay':
-                $query->with('staff.positions')
-                    ->whereHas('staff.positions', fn($q) => $q->where('position_name', 'Ministrong Tagasubaybay'));
-                break;
-            case 'principal':
-                $query->with('staff.positions')
-                    ->whereHas('staff.positions', fn($q) => $q->where('position_name', 'Principal'));
-                break;
-            case 'osd_officer':
-                $query->with('staff.positions')
-                    ->whereHas('staff.positions', fn($q) => $q->where('position_name', 'OSD Officer'));
-                break;
+
         }
 
         // Apply search filter
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('first_name', 'like', "%{$search}%")
-                ->orWhere('last_name', 'like', "%{$search}%")
-                ->orWhere('email', 'like', "%{$search}%");
+                  ->orWhere('last_name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
             });
         }
 

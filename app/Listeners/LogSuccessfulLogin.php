@@ -39,7 +39,7 @@ class LogSuccessfulLogin
             'device_name' => $agent->device(),
             'browser'     => $agent->browser(),
             'ip_address'  => request()->ip(),
-            'location'    => null, // optional: use IP geolocation service
+            'location'    => null, // Optional: use IP geolocation service
             'login_time'  => now(),
         ]);
     }

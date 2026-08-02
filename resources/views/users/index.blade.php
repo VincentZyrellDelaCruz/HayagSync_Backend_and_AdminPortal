@@ -18,30 +18,37 @@
             class="px-4 py-2 rounded {{ $filter==='parent_guardian' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
             Parent/Guardian
         </a>
-        <a href="{{ route('web.users.index', ['filter' => 'staff']) }}"
-           class="px-4 py-2 rounded {{ $filter==='staff' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
-           Staff
-        </a>
-        <a href="{{ route('web.users.index', ['filter' => 'teacher']) }}"
-           class="px-4 py-2 rounded {{ $filter==='teacher' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
-           Adviser/Teacher
-        </a>
-        <a href="{{ route('web.users.index', ['filter' => 'tagasubaybay']) }}"
-           class="px-4 py-2 rounded {{ $filter==='tagasubaybay' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
-           Ministrong Tagasubaybay
-        </a>
-        <a href="{{ route('web.users.index', ['filter' => 'principal']) }}"
-           class="px-4 py-2 rounded {{ $filter==='principal' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
-           Principal
-        </a>
-        <a href="{{ route('web.users.index', ['filter' => 'osd_officer']) }}"
-           class="px-4 py-2 rounded {{ $filter==='osd_officer' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
-           OSD Officer
-        </a>
-        <a href="{{ route('web.users.index', ['filter' => 'admin']) }}"
-            class="px-4 py-2 rounded {{ $filter==='admin' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
-            Admin
-        </a>
+
+        @if(array_intersect(auth()->user()?->staff?->positions->pluck('position_name')->toArray() ?? [], ['Principal','OSD Officer','Ministrong Tagasubaybay']))
+            <a href="{{ route('web.users.index', ['filter' => 'staff']) }}"
+            class="px-4 py-2 rounded {{ $filter==='staff' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
+                Staff
+            </a>
+            <a href="{{ route('web.users.index', ['filter' => 'teacher']) }}"
+            class="px-4 py-2 rounded {{ $filter==='teacher' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
+                Adviser/Teacher
+            </a>
+            <a href="{{ route('web.users.index', ['filter' => 'tagasubaybay']) }}"
+            class="px-4 py-2 rounded {{ $filter==='tagasubaybay' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
+                Ministrong Tagasubaybay
+            </a>
+            <a href="{{ route('web.users.index', ['filter' => 'principal']) }}"
+            class="px-4 py-2 rounded {{ $filter==='principal' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
+                Principal
+            </a>
+            <a href="{{ route('web.users.index', ['filter' => 'osd_officer']) }}"
+            class="px-4 py-2 rounded {{ $filter==='osd_officer' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
+                OSD Officer
+            </a>
+        @endif
+
+        {{-- Only show Admin filter if current user has admin rights --}}
+        @if(auth()->user()?->staff?->is_admin)
+            <a href="{{ route('web.users.index', ['filter' => 'admin']) }}"
+                class="px-4 py-2 rounded {{ $filter==='admin' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
+                Admin
+            </a>
+        @endif
     </div>
 
     {{-- Search Bar --}}
@@ -61,12 +68,12 @@
                     <th class="px-4 py-2 text-left text-xs font-semibold text-slate-600">Name</th>
                     <th class="px-4 py-2 text-left text-xs font-semibold text-slate-600">Email</th>
 
-                    @if($filter !== 'parent_guardian')
-                        <th class="px-4 py-2 text-left text-xs font-semibold text-slate-600">Position</th>
-                        <th class="px-4 py-2 text-left text-xs font-semibold text-slate-600">Department</th>
-                    @else
+                    @if($filter === 'parent_guardian')
                         <th class="px-4 py-2 text-left text-xs font-semibold text-slate-600">Parent Code</th>
                         <th class="px-4 py-2 text-left text-xs font-semibold text-slate-600">Occupation</th>
+                    @else
+                        <th class="px-4 py-2 text-left text-xs font-semibold text-slate-600">Position</th>
+                        <th class="px-4 py-2 text-left text-xs font-semibold text-slate-600">Department</th>
                     @endif
                 </tr>
             </thead>
@@ -79,19 +86,19 @@
                         </td>
                         <td class="px-4 py-2 text-sm text-slate-600">{{ $user->email }}</td>
 
-                        @if($filter !== 'parent_guardian')
-                            <td class="px-4 py-2 text-sm text-slate-600">
-                                {{ $user->staff?->latestPosition()?->position_name ?? 'N/A' }}
-                            </td>
-                            <td class="px-4 py-2 text-sm text-slate-600">
-                                {{ $user->staff?->department ?? 'N/A' }}
-                            </td>
-                        @else
+                        @if($filter === 'parent_guardian')
                             <td class="px-4 py-2 text-sm text-slate-600">
                                 {{ $user->parent_guardian?->parent_code ?? 'N/A' }}
                             </td>
                             <td class="px-4 py-2 text-sm text-slate-600">
                                 {{ $user->parent_guardian?->occupation ?? 'N/A' }}
+                            </td>
+                        @else
+                            <td class="px-4 py-2 text-sm text-slate-600">
+                                {{ $user->staff?->latestPosition()?->position_name ?? 'N/A' }}
+                            </td>
+                            <td class="px-4 py-2 text-sm text-slate-600">
+                                {{ $user->staff?->department ?? 'N/A' }}
                             </td>
                         @endif
                     </tr>

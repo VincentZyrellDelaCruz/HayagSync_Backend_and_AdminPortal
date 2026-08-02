@@ -49,6 +49,11 @@ class Staff extends Model
         return $this->positions()->orderByDesc('staff_position.assigned_at')->first();
     }
 
+    public function resolved_security(): HasMany
+    {
+        return $this->hasMany(SecurityEvent::class, 'resolved_by');
+    }
+
     /*
     public function reviewed_appeal(): BelongsTo
     {

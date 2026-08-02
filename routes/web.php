@@ -6,6 +6,7 @@ use App\Http\Controllers\Web\ActivityLogController;
 use App\Http\Controllers\Web\ChatController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\MeetingController;
+use App\Http\Controllers\Web\OtpController;
 use App\Http\Controllers\Web\ReportController;
 use App\Http\Controllers\Web\StudentController;
 use Illuminate\Support\Facades\Route;
@@ -27,7 +28,17 @@ Route::get('/', function () {
 
 Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['auth', 'verified', 'staff_only'])->name('dashboard');
 
+
+Route::prefix('/otp')->group(function () {
+    Route::get('/', [OtpController::class, 'index'])->name('otp.select');
+    Route::post('/', [OtpController::class, 'send'])->name('otp.send');
+    Route::get('/verify', [OtpController::class, 'verifyForm'])->name('otp.verify');
+    Route::post('/verify', [OtpController::class, 'verify'])->name('otp.verify.submit');
+});
+
+
 Route::middleware(['auth', 'staff_only'])->group(function () {
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');

@@ -10,8 +10,8 @@
              alt="Profile"
              class="w-10 h-10 rounded-full object-cover">
         <div>
-            <p class="text-sm font-semibold">{{ Auth::user()->last_name }}, {{ Auth::user()->first_name }}</p>
-            <p class="text-xs text-gray-400">{{ Auth::user()->staff?->latestPosition()?->position_name ?? 'No Position' }}</p>
+            <p class="text-sm font-semibold">{{ Auth::user()?->last_name }}, {{ Auth::user()?->first_name }}</p>
+            <p class="text-xs text-gray-400">{{ Auth::user()?->staff?->latestPosition()?->position_name ?? 'No Position' }}</p>
         </div>
     </div>
 
