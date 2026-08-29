@@ -1,0 +1,127 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    container_name: hayagsync-app
+    restart: unless-stopped
+    volumes:
+      - ./src:/var/www/html
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - hayagsync
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: hayagsync-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./src:/var/www/html
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d
+      - ./certs:/etc/nginx/certs
+    depends_on:
+      - app
+    networks:
+      - hayagsync
+
+  mysql:
+    image: mysql:8.0
+    container_name: hayagsync-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: hayagsync
+      MYSQL_USER: hayagsync
+      MYSQL_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: root_secret
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot_secret"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - hayagsync
+
+  redis:
+    image: redis:7-alpine
+    container_name: hayagsync-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - hayagsync
+
+  queue:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    container_name: hayagsync-queue
+    restart: unless-stopped
+    command: php artisan queue:work redis --sleep=3 --tries=3 --timeout=90
+    volumes:
+      - ./src:/var/www/html
+    depends_on:
+      - app
+      - redis
+      - mysql
+    networks:
+      - hayagsync
+
+  reverb:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    container_name: hayagsync-reverb
+    restart: unless-stopped
+    command: php artisan reverb:start --host=0.0.0.0 --port=6001
+    ports:
+      - "6001:6001"
+    volumes:
+      - ./src:/var/www/html
+    depends_on:
+      - app
+      - redis
+    networks:
+      - hayagsync
+
+  node:
+    image: node:22-alpine
+    container_name: hayagsync-node
+    working_dir: /var/www/html
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    volumes:
+      - ./src:/var/www/html
+    ports:
+      - "5173:5173"
+    networks:
+      - hayagsync
+
+volumes:
+  mysql_data:
+  redis_data:
+
+networks:
+  hayagsync:
+    driver: bridge
