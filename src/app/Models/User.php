@@ -122,4 +122,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Meeting::class, 'scheduled_by_user_id');
     }
+
+    public function meeting_participants(): HasMany
+    {
+        return $this->hasMany(MeetingParticipant::class);
+    }
 }

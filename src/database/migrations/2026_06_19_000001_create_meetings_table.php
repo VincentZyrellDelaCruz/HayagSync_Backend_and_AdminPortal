@@ -13,12 +13,14 @@ return new class extends Migration
     {
         Schema::create('meetings', function (Blueprint $table) {
             $table->uuid('id')->primary();
+            $table->string('meeting_code')->unique(); // Human-readable identifier
             $table->foreignUuid('report_id')->constrained('reports')->onDelete('cascade');
             $table->foreignUuid('scheduled_by')->constrained('users')->onDelete('cascade');
             $table->dateTime('meeting_date');
+            $table->enum('meeting_type', ['In-Person', 'Virtual', 'Both'])->default('Both');
+            $table->text('purpose');
             $table->text('notes')->nullable();
             $table->enum('status', ['Active', 'Canceled', 'Finished']);
-            // $table->string('meeting_type'); // Virtual, In-Person
             $table->timestamps();
         });
     }

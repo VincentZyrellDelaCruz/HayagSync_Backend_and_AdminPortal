@@ -2,7 +2,11 @@
 
 namespace App\Providers;
 
+use App\Models\Meeting;
+use App\Models\Report;
 use App\Models\User;
+use App\Observers\MeetingObserver;
+use App\Observers\ReportObserver;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -23,6 +27,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+
+        Report::observe(ReportObserver::class);
+        Meeting::observe(MeetingObserver::class);
+
         Gate::define('admin-only', function (User $user) {
             return $user->staff->is_admin === true;
         });

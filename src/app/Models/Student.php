@@ -79,4 +79,9 @@ class Student extends Model
     {
         return $this->hasMany(DisciplinaryAction::class, 'student_id');
     }
+
+    public function meeting_participants(): HasMany
+    {
+        return $this->hasMany(MeetingParticipant::class);
+    }
 }

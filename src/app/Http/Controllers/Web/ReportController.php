@@ -3,12 +3,19 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
-use App\Models\Report;
+use App\Models\GradeSection;
 use App\Models\IncidentCategory;
+use App\Models\MeetingParticipant;
+use App\Models\Report;
+use App\Models\ReportEvidence;
 use App\Models\ReportStatus;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\File;
 use Inertia\Inertia;
 
 class ReportController extends Controller
@@ -21,9 +28,21 @@ class ReportController extends Controller
         $selectedStatus = $req->query('status', 'all');
         $selectedCategory = $req->query('category', 'all');
 
-        $categories = IncidentCategory::where('is_active', true)->orderBy('category_name')->get();
+        $categories = IncidentCategory::where('is_active', true)
+            ->orderBy('category_name')
+            ->get();
 
-        $reportsQuery = Report::with(['user', 'current_status', 'category']);
+        $reportRelations = [
+            'user',
+            'current_status',
+            'category',
+        ];
+
+        if (method_exists(Report::class, 'current_assignee')) {
+            $reportRelations[] = 'current_assignee.user';
+        }
+
+        $reportsQuery = Report::with($reportRelations);
 
         if ($selectedStatus !== 'all') {
             $reportsQuery->whereHas('current_status', function ($query) use ($selectedStatus) {
@@ -35,51 +54,59 @@ class ReportController extends Controller
             $reportsQuery->where('category_id', $selectedCategory);
         }
 
+        $statusOrder = [
+            'Pending' => 1,
+            'Under Investigation' => 2,
+            'Scheduled' => 3,
+            'Escalated' => 4,
+            'Resolved' => 5,
+            'Dismissed' => 6,
+        ];
+
         $allReports = $reportsQuery
-                ->get()
-                ->sortBy([
-                    fn ($report) => match ($report->current_status?->status_name) {
-                        'Pending' => 1,
-                        'Under Investigation' => 2,
-                        'Scheduled' => 3,
-                        'Resolved' => 4,
-                        'Unresolved' => 5,
-                        'Cancelled' => 6,
-                        default => 99,
-                    },
+            ->get()
+            ->sort(function ($a, $b) use ($statusOrder) {
+                $statusA = $a->current_status?->status_name ?? '';
+                $statusB = $b->current_status?->status_name ?? '';
 
-                    fn ($report) => match ($report->current_status?->status_name) {
-                        'Pending' => 1,
-                        'Under Investigation' => 2,
-                        'Scheduled' => 3,
-                        'Resolved' => 4,
-                        'Unresolved' => 5,
-                        'Cancelled' => 6,
-                        default => 99,
-                    },
+                $rankA = $statusOrder[$statusA] ?? 99;
+                $rankB = $statusOrder[$statusB] ?? 99;
 
-                    fn ($report) => -$report->created_at->timestamp,
-                ])
-                ->values();
+                if ($rankA !== $rankB) {
+                    return $rankA <=> $rankB;
+                }
 
-            $perPage = 10;
-            $currentPage = LengthAwarePaginator::resolveCurrentPage();
+                return $b->created_at->timestamp <=> $a->created_at->timestamp;
+            })
+            ->values();
 
-            $currentItems = $allReports->slice(($currentPage -1) * $perPage, $perPage)->values();
+        $perPage = 10;
+        $currentPage = LengthAwarePaginator::resolveCurrentPage();
 
-            $reports = new LengthAwarePaginator(
-                $currentItems,
-                $allReports->count(),
-                $perPage,
-                $currentPage,
-                [
-                    'path' => $req->url(),
-                    'query' => $req->query(),
-                ]
-            );
+        $currentItems = $allReports
+            ->slice(($currentPage - 1) * $perPage, $perPage)
+            ->values();
 
-            $statuses = ['all', 'Pending', 'Under Investigation' , 'Scheduled',
-                    'Resolved', 'Dropped'];
+        $reports = new LengthAwarePaginator(
+            $currentItems,
+            $allReports->count(),
+            $perPage,
+            $currentPage,
+            [
+                'path' => $req->url(),
+                'query' => $req->query(),
+            ]
+        );
+
+        $statuses = [
+            'all',
+            'Pending',
+            'Under Investigation',
+            'Scheduled',
+            'Escalated',
+            'Resolved',
+            'Dismissed',
+        ];
 
         return Inertia::render('Reports/Index', compact(
             'reports',
@@ -113,20 +140,28 @@ class ReportController extends Controller
     {
         $report = Report::with('latest_update.report_status')->findOrFail($id);
 
-        if (!$report->latest_update ||
-            $report->latest_update->report_status?->status_name === 'Pending') {
+        if (
+            !$report->latest_update ||
+            $report->latest_update->report_status?->status_name === 'Pending'
+        ) {
+            $underInvestigationStatus = ReportStatus::where(
+                'status_name',
+                'Under Investigation'
+            )->first();
 
-            $report->update([
-                'current_status_id' => 2, // Under Investigation status
-            ]);
+            if ($underInvestigationStatus) {
+                $report->update([
+                    'current_status_id' => $underInvestigationStatus->id,
+                ]);
 
-            $report->report_updates()->create([
-                'updated_by' => Auth::user()->id,
-                'status_id' => 2, // Under Investigation status
-            ]);
+                $report->report_updates()->create([
+                    'updated_by' => Auth::user()->id,
+                    'status_id' => $underInvestigationStatus->id,
+                ]);
+            }
         }
 
-        $report->load([
+        $reportRelations = [
             'user',
             'category',
             'current_status',
@@ -141,11 +176,64 @@ class ReportController extends Controller
                 ])->latest();
             },
             'meetings.scheduler',
-        ]);
+            'meetings.participants.student',
+            'meetings.participants.user',
+        ];
 
-        $statuses = ReportStatus::whereNotIn('status_name', ['Pending', 'Under Investigation'])->get();
+        if (method_exists(Report::class, 'current_assignee')) {
+            $reportRelations[] = 'current_assignee.user';
+        }
 
-        return Inertia::render('Reports/Report', compact('report', 'statuses'));
+        if (method_exists(Report::class, 'assignments')) {
+            $reportRelations[] = 'assignments.assignee.user';
+            $reportRelations[] = 'assignments.assigner.user';
+        }
+
+        $report->load($reportRelations);
+
+        $statuses = ReportStatus::whereNotIn(
+            'status_name',
+            ['Pending', 'Under Investigation']
+        )->get();
+
+        return Inertia::render(
+            'Reports/Report',
+            compact('report', 'statuses')
+        );
+    }
+
+    public function streamEvidence(string $id)
+    {
+        $evidence = ReportEvidence::findOrFail($id);
+
+        abort_unless(
+            Auth::check() && Auth::user()->staff,
+            403
+        );
+
+        $path = Storage::disk('public')->path(
+            $evidence->file_path
+        );
+
+        abort_unless(
+            is_file($path),
+            404
+        );
+
+        $mimeType = $evidence->mime_type
+            ?: File::mimeType(storage_path('app/public/' . $evidence->file_path))
+            ?: 'application/octet-stream';
+
+        return response()->file(
+            $path,
+            [
+                'Content-Type' => $mimeType,
+                'Content-Disposition' => 'inline; filename="' . basename($evidence->file_name) . '"',
+                'Accept-Ranges' => 'bytes',
+                'Cache-Control' => 'private, max-age=3600',
+                'X-Content-Type-Options' => 'nosniff',
+            ]
+        );
     }
 
     /**
@@ -162,34 +250,83 @@ class ReportController extends Controller
     public function update(Request $req, string $id)
     {
         $validated = $req->validate([
-            'status_id' => 'required|numeric',
-            'note' => 'nullable|max:200',
-            'type' => 'required',
+            'status_id' => 'nullable|numeric|exists:report_statuses,id',
+            'note' => 'nullable|string|max:2000',
+            'type' => 'required|string',
+            'meeting_datetime' => 'required_if:type,schedule|date|after:now',
+            'meeting_type' => 'required_if:type,schedule|in:In-Person,Virtual,Both',
+            'purpose' => 'required_if:type,schedule|string|max:2000',
+            'participant_ids' => 'nullable|array',
+            'participant_ids.*' => 'uuid|exists:students,id',
+            'guest_name' => 'nullable|string|max:255',
         ]);
 
         $report = Report::findOrFail($id);
 
-        $report->update([
-            'current_status_id' => $validated['status_id'],
-        ]);
-
         if ($validated['type'] === 'schedule') {
-            $report->meetings()->create([
-                'scheduled_by' => Auth::user()->id,
-                'meeting_date' => $req->input('meeting_datetime'),
-                'notes' => $validated['note'],
-                'status' => 'Active',
-            ]);
+            DB::transaction(function () use (
+                $report,
+                $validated
+            ) {
+                $scheduledStatus = ReportStatus::where(
+                    'status_name',
+                    'Scheduled'
+                )->firstOrFail();
+
+                $report->update([
+                    'current_status_id' => $scheduledStatus->id,
+                ]);
+
+                $meeting = $report->meetings()->create([
+                    'scheduled_by' => Auth::user()->id,
+                    'meeting_date' => $validated['meeting_datetime'],
+                    'meeting_type' => $validated['meeting_type'],
+                    'purpose' => $validated['purpose'],
+                    'notes' => $validated['note'] ?? null,
+                    'status' => 'Active',
+                ]);
+
+                $participantIds = $validated['participant_ids'] ?? [];
+
+                if (!empty($participantIds)) {
+                    $students = $report->students()
+                        ->whereIn(
+                            'students.id',
+                            $participantIds
+                        )
+                        ->get();
+
+                    foreach ($students as $student) {
+                        MeetingParticipant::create([
+                            'meeting_id' => $meeting->id,
+                            'student_id' => $student->id,
+                            'participant_role' => $student->pivot->involvement_type ?? 'Unknown',
+                            'attendance_status' => null,
+                        ]);
+                    }
+                }
+
+                if (!empty(trim($validated['guest_name'] ?? ''))) {
+                    MeetingParticipant::create([
+                        'meeting_id' => $meeting->id,
+                        'guest_name' => trim($validated['guest_name']),
+                        'participant_role' => 'Guest',
+                        'attendance_status' => null,
+                    ]);
+                }
+
+                $report->report_updates()->create([
+                    'updated_by' => Auth::user()->id,
+                    'status_id' => $scheduledStatus->id,
+                    'note' => $validated['note'] ?? null,
+                ]);
+            });
         }
 
-        $report->report_updates()->create([
-            'updated_by' => Auth::user()->id,
-            'status_id' => $validated['status_id'], // Under Investigation status
-        ]);
-
-        // $this->notifyReport($report->id, $validated['note'] ?? '');
-
-        return redirect()->route('web.reports.show', $report->id);
+        return redirect()->route(
+            'web.reports.show',
+            $report->id
+        );
     }
 
     /**

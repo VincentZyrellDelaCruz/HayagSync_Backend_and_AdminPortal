@@ -2,35 +2,32 @@
 
 namespace Database\Seeders;
 
-use App\Models\ParentGuardian;
-use App\Models\Student;
 use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\Student;
+use App\Models\ParentGuardian;
+use App\Models\Staff;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
 class ParentSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     * php artisan db:seed --class=ParentSeeder
-     */
     public function run(): void
     {
-        $user = User::orderBy('last_name', 'desc')->first()->id;
-        $parent = ParentGuardian::create([
-            'user_id' => $user,
-            'parent_code' => strtoupper(Str::random(8)),
-            'occupation' => 'Doctor',
-        ]);
-        // $parent_guardian = ParentGuardian::first();
+        $staffUserIds = Staff::pluck('user_id')->toArray();
+        $parentUsers = User::whereNotIn('id', $staffUserIds)->get();
 
-        $students = Student::limit(2)->get();
-
-        foreach ($students as $student) {
-            $parent->students()->attach([
-                $student->id => ['relationship' => 'Son'],
+        foreach ($parentUsers as $user) {
+            $parent = ParentGuardian::create([
+                'user_id' => $user->id,
+                'parent_code' => strtoupper(Str::random(8)),
+                'occupation' => fake()->jobTitle(),
             ]);
+
+            $students = Student::inRandomOrder()->limit(rand(1, 3))->get();
+            foreach ($students as $student) {
+                $relationship = $student->gender === 'Male' ? 'Son' : 'Daughter';
+                $parent->students()->attach($student->id, ['relationship' => $relationship]);
+            }
         }
     }
 }

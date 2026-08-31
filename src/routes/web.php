@@ -41,14 +41,21 @@ Route::middleware(['auth', 'staff_only'])->group(function () {
     Route::put('/meetings/{meeting}/{action}', [MeetingController::class, 'update'])->name('web.meetings.update');
     Route::post('/meetings/{meeting}/chat', [ChatController::class, 'store'])->name('web.chat_messages.store');
 
-    Route::resource('/reports', ReportController::class)->names([
+    Route::prefix('/reports')->name('web.reports.')->controller(ReportController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/{id}', 'show')->name('show');
+        Route::get('/reports/evidence/{reportEvidence}/stream', 'streamEvidence')->name('evidence.stream');
+        Route::put('/{id}', 'update')->name('update');
+    });
+
+    /* Route::resource('/reports', ReportController::class)->names([
         'index'   => 'web.reports.index',
         'create'  => 'web.reports.create',
         'store'   => 'web.reports.store',
         'show'    => 'web.reports.show',
         'edit'    => 'web.reports.edit',
         'update'  => 'web.reports.update',
-    ]);
+    ]); */
 
     Route::get('/students', [StudentController::class, 'index'])->name('web.students.index');
     Route::get('/students/{student}', [StudentController::class, 'show'])->name('web.students.show');

@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
 
     // php artisan migrate:fresh --seed
     // php artisan db:seed
+    // docker compose exec app php artisan migrate:fresh --seed
 
     /**
      * Seed the application's database.
@@ -27,13 +28,13 @@ class DatabaseSeeder extends Seeder
             'email' => 'test@example.com',
         ]); */
 
-        User::factory(10)->create();
+        User::factory(20)->create();
         $this->call(StaffSeeder::class);
 
         $schoolYear = SchoolYear::factory()->create();
         $this->call(GradeSectionSeeder::class);
 
-        $students = Student::factory(10)->create();
+        $students = Student::factory(50)->create();
 
         $sections = GradeSection::all();
         foreach ($students as $student) {

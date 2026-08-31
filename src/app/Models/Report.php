@@ -22,7 +22,8 @@ class Report extends Model
     ];
 
     protected $fillable = [
-        'school_id',
+        /* 'school_id', */
+        'report_code',
         'reported_by',
         'category_id',
         'current_status_id',
@@ -63,6 +64,21 @@ class Report extends Model
     public function report_updates(): HasMany
     {
         return $this->hasMany(ReportUpdate::class, 'report_id');
+    }
+
+    public function report_assignments(): HasMany
+    {
+        return $this->hasMany(ReportAssignment::class, 'report_id');
+    }
+
+    public function latest_assignment(): HasOne
+    {
+        return $this->hasOne(ReportAssignment::class, 'report_id')->latestOfMany();
+    }
+
+    public function get_latest_level()
+    {
+        return $this->latest_assignment?->level;
     }
 
     public function latest_update(): HasOne

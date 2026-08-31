@@ -57,6 +57,12 @@ return [
             'throw' => false,
         ],
 
+        'test_file' => [
+            'driver' => 'local',
+            'root' => '/seed_media',
+            'throw' => false,
+        ],
+
     ],
 
     /*
@@ -74,4 +80,5 @@ return [
         public_path('storage') => storage_path('app/public'),
     ],
 
+    /* 'test_file' => env('TEST_FILE_URL', ''), */
 ];

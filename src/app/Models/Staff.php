@@ -64,6 +64,16 @@ class Staff extends Model
         return $this->hasMany(SecurityEvent::class, 'resolved_by');
     }
 
+    public function report_assigned_to(): BelongsTo
+    {
+        return $this->belongsTo(ReportAssignment::class, 'assigned_to');
+    }
+
+    public function report_assigned_by(): BelongsTo
+    {
+        return $this->belongsTo(ReportAssignment::class, 'assigned_by');
+    }
+
     /*
     public function reviewed_appeal(): BelongsTo
     {

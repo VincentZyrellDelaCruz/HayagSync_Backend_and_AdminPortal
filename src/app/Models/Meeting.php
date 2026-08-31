@@ -16,9 +16,10 @@ class Meeting extends Model
         'report_id',
         'scheduled_by',
         'meeting_date',
+        'meeting_type',
+        'purpose',
         'notes',
         'status',
-        // 'meeting_type',
     ];
 
     protected $casts = [
@@ -38,5 +39,10 @@ class Meeting extends Model
     public function chatMessages(): HasMany
     {
         return $this->hasMany(ChatMessage::class);
+    }
+
+    public function participants(): HasMany
+    {
+        return $this->hasMany(MeetingParticipant::class);
     }
 }

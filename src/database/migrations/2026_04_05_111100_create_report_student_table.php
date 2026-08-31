@@ -16,6 +16,8 @@ return new class extends Migration
             $table->foreignUuid('report_id')->constrained('reports')->onDelete('cascade');
             $table->foreignUuid('student_id')->constrained('students')->onDelete('cascade');
             $table->string('involvement_type');
+            $table->enum('finding', ['pending', 'substantiated', 'unsubstantiated', 'corroborated', 'cleared'])
+                ->default('pending');
             $table->text('notes')->nullable();
         });
     }

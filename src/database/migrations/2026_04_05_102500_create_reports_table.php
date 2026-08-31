@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('reports', function (Blueprint $table) {
             $table->uuid('id')->primary();
+            $table->string('report_code')->unique();
             $table->foreignUuid('reported_by')->constrained('users')->onDelete('cascade');
             $table->foreignId('category_id')->constrained('incident_categories')->onDelete('cascade');
             $table->foreignId('current_status_id')->constrained('report_statuses')->onDelete('cascade');
@@ -24,27 +25,6 @@ return new class extends Migration
             $table->text('ai_summary')->nullable();
             $table->timestamps();
             $table->softDeletes();
-
-            /* $table->foreignId('parent_id')->constrained('users')->onDelete('cascade');
-            $table->string('parent_name');
-            $table->string('student_name');
-            $table->string('student_section');
-            $table->string('student_grade');
-            $table->string('title');
-            $table->text('description');
-            $table->string('category');
-            $table->dateTime('incident_date');
-            $table->string('incident_location');
-            $table->string('evidence_url')->nullable(); */
-
-            // Alleged Bully & Witnesses
-            /* $table->string('bully_name')->nullable();
-            $table->string('bully_grade_section')->nullable();
-            $table->text('witnesses')->nullable(); */
-
-            // Lifecycle status
-            // $table->string('status')->default('Pending'); // Pending, Under Review, Scheduled, Escalated, Resolved
-
         });
     }
 
