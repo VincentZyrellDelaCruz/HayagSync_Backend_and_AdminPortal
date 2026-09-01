@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignUuid('report_id')->constrained()->restrictOnDelete();
             $table->foreignUuid('assigned_to')->nullable()->references('user_id')->on('staff')->onDelete('cascade');
             $table->foreignUuid('assigned_by')->nullable()->references('user_id')->on('staff')->onDelete('cascade');
-            $table->string('level'); // 1 (Teacher/Adviser) to 4 (OSD)
+            $table->string('level'); // 1 (Teacher/Adviser), 2 (Principal), 3 (Minsitrong Tagasubaybay), 4 (OSD)
             /* $table->text('reason'); */
             $table->timestamp('assigned_at');
             $table->timestamp('ended_at');

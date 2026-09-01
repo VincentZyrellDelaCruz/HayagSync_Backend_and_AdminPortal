@@ -127,15 +127,25 @@ interface ReportDetail extends Omit<
     category: ReportCategory | null;
     current_status: ReportStatus;
     latest_update: ReportUpdate | null;
+    latest_assignment?: {
+        id: string;
+        assigned_to?: string | null;
+        level: string | number;
+        assigned_at?: string | null;
+        ended_at?: string | null;
+    } | null;
     report_evidences: Evidence[];
     students: StudentInvolved[];
     report_updates: ReportUpdate[];
     meetings: Meeting[];
     severity?: string | null;
     escalation_level?: number | null;
+    current_level?: number | null;
     escalated_at?: string | null;
     closed_at?: string | null;
     current_assignee?: CurrentAssignee | null;
+    can_act?: boolean;
+    read_only?: boolean;
 }
 
 interface ReportShowProps {
@@ -352,6 +362,10 @@ export default function Report({ report }: ReportShowProps) {
     const { auth } = usePage<PageProps>().props;
 
     const [scheduleOpen, setScheduleOpen] = useState(false);
+    const [forwardOpen, setForwardOpen] = useState(false);
+    const [resolveOpen, setResolveOpen] = useState(false);
+    const [resolveConfirmOpen, setResolveConfirmOpen] = useState(false);
+    const [dismissOpen, setDismissOpen] = useState(false);
     const [openChats, setOpenChats] = useState<Record<string, boolean>>({});
     const [messageDrafts, setMessageDrafts] = useState<Record<string, string>>({});
     const [preview, setPreview] = useState<{
@@ -363,7 +377,23 @@ export default function Report({ report }: ReportShowProps) {
 
     const status = report.current_status?.status_name ?? 'No Status';
 
-    const canSchedule = !['Resolved', 'Dismissed'].includes(status);
+    const currentLevel = Number(
+        report.current_level ??
+        report.escalation_level ??
+        report.latest_assignment?.level ??
+        0,
+    );
+
+    const canAct = report.can_act === true && !['Resolved', 'Dismissed'].includes(status);
+
+    const canSchedule = canAct;
+
+    const canForward = canAct && currentLevel >= 1 && currentLevel < 4;
+
+    const forwardLabel =
+        currentLevel === 1 ? 'Forward to Principal'
+            : (currentLevel === 2 ? 'Forward to Ministro'
+                : (currentLevel === 3 ? 'Forward to OSD' : ''));
 
     const reporter = report.user
         ? `${report.user.last_name}, ${report.user.first_name}`
@@ -375,7 +405,7 @@ export default function Report({ report }: ReportShowProps) {
 
     const breadcrumbs: BreadcrumbItem[] = [
         {
-            title: 'Incident Inbox',
+            title: 'Incident Report',
             href: route('web.reports.index'),
         },
         {
@@ -393,6 +423,71 @@ export default function Report({ report }: ReportShowProps) {
         guest_name: '',
         type: 'schedule',
     });
+
+    const forwardForm = useForm({
+        note: '',
+    });
+
+    const resolveForm = useForm({
+        resolution_note: '',
+        offender_id: '',
+        discipline_action: '',
+        discipline_notes: '',
+    });
+
+    const dismissForm = useForm({
+        dismissal_note: '',
+    });
+
+    const submitForward = (e: FormEvent) => {
+        e.preventDefault();
+
+        forwardForm.post(
+            route('web.reports.forward', report.id),
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setForwardOpen(false);
+                    forwardForm.reset();
+                },
+            },
+        );
+    };
+
+    const submitResolve = (e: FormEvent) => {
+        e.preventDefault();
+
+        setResolveOpen(false);
+        setResolveConfirmOpen(true);
+    };
+
+    const confirmResolve = () => {
+        resolveForm.post(
+            route('web.reports.resolve', report.id),
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setResolveConfirmOpen(false);
+                    resolveForm.reset();
+                },
+            },
+        );
+    };
+
+    const submitDismiss = (e: FormEvent) => {
+        e.preventDefault();
+
+        dismissForm.post(
+            route('web.reports.dismiss', report.id),
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setDismissOpen(false);
+                    dismissForm.reset();
+                },
+            },
+        );
+    };
 
     const submitSchedule = (e: FormEvent) => {
         e.preventDefault();
@@ -473,6 +568,24 @@ export default function Report({ report }: ReportShowProps) {
 
             <div className="min-h-full bg-slate-50/70">
                 <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-5 sm:px-6 sm:py-7 lg:px-8 lg:py-8">
+                    {report.read_only && (
+                        <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                            <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-slate-400" />
+
+                            <div>
+                                <p className="text-sm font-semibold text-slate-700">
+                                    Read-only case access
+                                </p>
+
+                                <p className="mt-0.5 text-xs leading-5 text-slate-500">
+                                    You can review this incident and its history, but
+                                    case actions are currently assigned to another
+                                    authorized staff member.
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
                     {/* HEADER */}
                     <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
                         <div className="p-5 sm:p-6 lg:p-7">
@@ -535,9 +648,7 @@ export default function Report({ report }: ReportShowProps) {
                                         {canSchedule && (
                                             <Button
                                                 type="button"
-                                                onClick={() =>
-                                                    setScheduleOpen(true)
-                                                }
+                                                onClick={() => setScheduleOpen(true)}
                                                 className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
                                             >
                                                 <CalendarSync className="h-4 w-4" />
@@ -545,34 +656,38 @@ export default function Report({ report }: ReportShowProps) {
                                             </Button>
                                         )}
 
-                                        <Button
-                                            type="button"
-                                            disabled
-                                            className="inline-flex items-center gap-1.5 rounded-xl bg-orange-100 px-4 py-2.5 text-sm font-semibold text-orange-400 disabled:cursor-not-allowed disabled:opacity-70"
-                                        >
-                                            <Send className="h-4 w-4" />
-                                            {auth.user?.staff?.latest_position?.position_name === 'Teacher'
-                                                ? 'Forward to Ministro/Principal'
-                                                : 'Forward to OSD Officer'}
-                                        </Button>
+                                        {canForward && (
+                                            <Button
+                                                type="button"
+                                                onClick={() => setForwardOpen(true)}
+                                                className="inline-flex items-center gap-1.5 rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-purple-700"
+                                            >
+                                                <Send className="h-4 w-4" />
+                                                {forwardLabel}
+                                            </Button>
+                                        )}
 
-                                        <Button
-                                            type="button"
-                                            disabled
-                                            className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-100 px-4 py-2.5 text-sm font-semibold text-emerald-400 disabled:cursor-not-allowed disabled:opacity-70"
-                                        >
-                                            <CheckCircle2 className="h-4 w-4" />
-                                            Resolve
-                                        </Button>
+                                        {canAct && (
+                                            <>
+                                                <Button
+                                                    type="button"
+                                                    onClick={() => setResolveOpen(true)}
+                                                    className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700"
+                                                >
+                                                    <CheckCircle2 className="h-4 w-4" />
+                                                    Resolve
+                                                </Button>
 
-                                        <Button
-                                            type="button"
-                                            disabled
-                                            className="inline-flex items-center gap-1.5 rounded-xl bg-rose-100 px-4 py-2.5 text-sm font-semibold text-rose-400 disabled:cursor-not-allowed disabled:opacity-70"
-                                        >
-                                            <X className="h-4 w-4" />
-                                            Dismiss
-                                        </Button>
+                                                <Button
+                                                    type="button"
+                                                    onClick={() => setDismissOpen(true)}
+                                                    className="inline-flex items-center gap-1.5 rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-rose-700"
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                    Dismiss
+                                                </Button>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -759,7 +874,8 @@ export default function Report({ report }: ReportShowProps) {
                                         label="Incident Time"
                                         value={
                                             report.incident_time
-                                                ?? 'Not specified'
+                                            ? new Date(report.incident_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                            : 'Not specified'
                                         }
                                     />
 
@@ -1908,6 +2024,377 @@ export default function Report({ report }: ReportShowProps) {
                             className="w-full resize-y rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                         />
                     </div>
+                </form>
+            </Modal>
+
+            {/* FORWARD */}
+            <Modal
+                isOpen={forwardOpen}
+                onClose={() => setForwardOpen(false)}
+                title={forwardLabel}
+                description="Provide a brief reason for escalating this incident to the next authorized staff level."
+                size="lg"
+                footer={
+                    <>
+                        <button
+                            type="button"
+                            onClick={() => setForwardOpen(false)}
+                            className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                        >
+                            Cancel
+                        </button>
+
+                        <button
+                            type="submit"
+                            form="forward-report-form"
+                            disabled={forwardForm.processing}
+                            className="rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            {forwardForm.processing
+                                ? 'Forwarding…'
+                                : 'Confirm Forward'}
+                        </button>
+                    </>
+                }
+            >
+                <form
+                    id="forward-report-form"
+                    onSubmit={submitForward}
+                    className="space-y-4"
+                >
+                    <div className="rounded-2xl border border-purple-100 bg-purple-50 p-4">
+                        <div className="flex items-start gap-3">
+                            <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-purple-600" />
+
+                            <div>
+                                <p className="text-sm font-semibold text-purple-900">
+                                    Level {currentLevel} → Level {currentLevel + 1}
+                                </p>
+
+                                <p className="mt-1 text-xs leading-5 text-purple-700">
+                                    The current case handler will retain read-only
+                                    access after the case is escalated.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label
+                            htmlFor="forward_note"
+                            className="mb-1.5 block text-sm font-medium text-slate-700"
+                        >
+                            Reason for escalation
+                        </label>
+
+                        <textarea
+                            id="forward_note"
+                            rows={5}
+                            value={forwardForm.data.note}
+                            onChange={(e) =>
+                                forwardForm.setData(
+                                    'note',
+                                    e.target.value,
+                                )
+                            }
+                            placeholder="Explain why the case requires the next level of review..."
+                            className="w-full resize-y rounded-xl border border-slate-300 px-3 py-2.5 text-sm leading-6 text-slate-800 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100"
+                        />
+
+                        {forwardForm.errors.note && (
+                            <p className="mt-1 text-xs text-red-600">
+                                {forwardForm.errors.note}
+                            </p>
+                        )}
+                    </div>
+                </form>
+            </Modal>
+
+            {/* RESOLVE */}
+            <Modal
+                isOpen={resolveOpen}
+                onClose={() => setResolveOpen(false)}
+                title="Resolve Incident Report"
+                description="Record the resolution and any final disciplinary action required for this case."
+                size="lg"
+                footer={
+                    <>
+                        <button
+                            type="button"
+                            onClick={() => setResolveOpen(false)}
+                            className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                        >
+                            Cancel
+                        </button>
+
+                        <button
+                            type="submit"
+                            form="resolve-report-form"
+                            className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                        >
+                            Continue
+                        </button>
+                    </>
+                }
+            >
+                <form
+                    id="resolve-report-form"
+                    onSubmit={submitResolve}
+                    className="space-y-5"
+                >
+                    {currentLevel === 4 && (
+                        <div className="space-y-4 rounded-2xl border border-red-100 bg-red-50/60 p-4">
+                            <div className="flex items-start gap-3">
+                                <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+
+                                <div>
+                                    <p className="text-sm font-semibold text-red-900">
+                                        OSD disciplinary action
+                                    </p>
+
+                                    <p className="mt-1 text-xs leading-5 text-red-700">
+                                        Select the confirmed offender and record
+                                        the disciplinary action to be imposed.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label
+                                    htmlFor="offender_id"
+                                    className="mb-1.5 block text-sm font-medium text-slate-700"
+                                >
+                                    Confirmed offender
+                                </label>
+
+                                <select
+                                    id="offender_id"
+                                    value={resolveForm.data.offender_id}
+                                    onChange={(e) =>
+                                        resolveForm.setData(
+                                            'offender_id',
+                                            e.target.value,
+                                        )
+                                    }
+                                    className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100 text-black"
+                                >
+                                    <option value="">
+                                        Select a substantiated offender
+                                    </option>
+
+                                    {report.students
+                                        .filter((student) =>
+                                            ['offender', 'Offender'].includes(
+                                                String(
+                                                    student.pivot.involvement_type,
+                                                ),
+                                            ),
+                                        )
+                                        .map((student) => (
+                                            <option
+                                                key={student.id}
+                                                value={student.id}
+                                            >
+                                                {studentFullName(student)} —{' '}
+                                                {student.student_number}
+                                            </option>
+                                        ))}
+                                </select>
+
+                                {resolveForm.errors.offender_id && (
+                                    <p className="mt-1 text-xs text-red-600">
+                                        {resolveForm.errors.offender_id}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div>
+                                <label
+                                    htmlFor="discipline_action"
+                                    className="mb-1.5 block text-sm font-medium text-slate-700"
+                                >
+                                    Disciplinary action
+                                </label>
+
+                                <input
+                                    id="discipline_action"
+                                    type="text"
+                                    value={resolveForm.data.discipline_action}
+                                    onChange={(e) =>
+                                        resolveForm.setData(
+                                            'discipline_action',
+                                            e.target.value,
+                                        )
+                                    }
+                                    placeholder="e.g. Written warning, suspension, other authorized sanction"
+                                    className="h-11 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100 text-slate-700"
+                                />
+
+                                {resolveForm.errors.discipline_action && (
+                                    <p className="mt-1 text-xs text-red-600">
+                                        {resolveForm.errors.discipline_action}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div>
+                                <label
+                                    htmlFor="discipline_notes"
+                                    className="mb-1.5 block text-sm font-medium text-slate-700"
+                                >
+                                    Disciplinary notes
+                                </label>
+
+                                <textarea
+                                    id="discipline_notes"
+                                    rows={3}
+                                    value={resolveForm.data.discipline_notes}
+                                    onChange={(e) =>
+                                        resolveForm.setData(
+                                            'discipline_notes',
+                                            e.target.value,
+                                        )
+                                    }
+                                    placeholder="Optional details supporting the disciplinary action..."
+                                    className="w-full resize-y rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100 text-slate-700"
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    <div>
+                        <label
+                            htmlFor="resolution_note"
+                            className="mb-1.5 block text-sm font-medium text-slate-700"
+                        >
+                            Resolution summary
+                        </label>
+
+                        <textarea
+                            id="resolution_note"
+                            rows={5}
+                            value={resolveForm.data.resolution_note}
+                            onChange={(e) =>
+                                resolveForm.setData(
+                                    'resolution_note',
+                                    e.target.value,
+                                )
+                            }
+                            placeholder="Describe how the case was handled and why it is ready to be resolved..."
+                            className="w-full resize-y rounded-xl border border-slate-300 px-3 py-2.5 text-sm leading-6 text-slate-800 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                        />
+
+                        {resolveForm.errors.resolution_note && (
+                            <p className="mt-1 text-xs text-red-600">
+                                {resolveForm.errors.resolution_note}
+                            </p>
+                        )}
+                    </div>
+                </form>
+            </Modal>
+
+            <Modal
+                isOpen={resolveConfirmOpen}
+                onClose={() => setResolveConfirmOpen(false)}
+                title="Confirm Resolution"
+                description="Resolving the incident will close the current case workflow and end the active assignment."
+                size="md"
+                footer={
+                    <>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setResolveConfirmOpen(false);
+                                setResolveOpen(true);
+                            }}
+                            className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                        >
+                            Back
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={confirmResolve}
+                            disabled={resolveForm.processing}
+                            className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            <CheckCircle2 className="h-4 w-4" />
+                            {resolveForm.processing
+                                ? 'Resolving…'
+                                : 'Confirm Resolution'}
+                        </button>
+                    </>
+                }
+            >
+                <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+                    <p className="text-sm leading-6 text-emerald-900">
+                        The report will be marked as <strong>Resolved</strong>.
+                        The case history and any recorded disciplinary action
+                        will remain available for authorized review.
+                    </p>
+                </div>
+            </Modal>
+
+            {/* DISMISS */}
+            <Modal
+                isOpen={dismissOpen}
+                onClose={() => setDismissOpen(false)}
+                title="Dismiss Incident Report"
+                description="Record why the complaint is being dismissed, such as insufficient evidence or an unsubstantiated report."
+                size="lg"
+                footer={
+                    <>
+                        <button
+                            type="button"
+                            onClick={() => setDismissOpen(false)}
+                            className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                        >
+                            Cancel
+                        </button>
+
+                        <button
+                            type="submit"
+                            form="dismiss-report-form"
+                            disabled={dismissForm.processing}
+                            className="rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            {dismissForm.processing
+                                ? 'Dismissing…'
+                                : 'Confirm Dismissal'}
+                        </button>
+                    </>
+                }
+            >
+                <form
+                    id="dismiss-report-form"
+                    onSubmit={submitDismiss}
+                >
+                    <label
+                        htmlFor="dismissal_note"
+                        className="mb-1.5 block text-sm font-medium text-slate-700"
+                    >
+                        Reason / Note
+                    </label>
+
+                    <textarea
+                        id="dismissal_note"
+                        rows={6}
+                        value={dismissForm.data.dismissal_note}
+                        onChange={(e) =>
+                            dismissForm.setData(
+                                'dismissal_note',
+                                e.target.value,
+                            )
+                        }
+                        placeholder="State why the complaint is being dismissed..."
+                        className="w-full resize-y rounded-xl border border-slate-300 px-3 py-2.5 text-sm leading-6 text-slate-800 outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-100"
+                    />
+
+                    {dismissForm.errors.dismissal_note && (
+                        <p className="mt-1 text-xs text-red-600">
+                            {dismissForm.errors.dismissal_note}
+                        </p>
+                    )}
                 </form>
             </Modal>
 

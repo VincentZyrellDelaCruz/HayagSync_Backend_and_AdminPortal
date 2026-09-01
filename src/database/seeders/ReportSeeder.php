@@ -55,7 +55,7 @@ class ReportSeeder extends Seeder
                 'report_code'       => $reportCode,
                 'reported_by'       => $user->id,
                 'category_id'       => IncidentCategory::inRandomOrder()->first()->id,
-                'current_status_id' => ReportStatus::inRandomOrder()->first()->id,
+                'current_status_id' => 1,
                 'incident_title'    => "Incident #{$i}",
                 'description'       => fake()->paragraph(3),
                 'location'          => fake()->randomElement(['Classroom', 'Hallway', 'Playground', 'Cafeteria']),

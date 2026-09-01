@@ -30,7 +30,7 @@ class StudentController extends Controller
         if ($isAdviser) {
             $sectionQuery->where(
                 'adviser',
-                $user->staff->id
+                $user->staff->user_id
             );
         }
 
@@ -52,7 +52,7 @@ class StudentController extends Controller
         if ($isAdviser) {
             $gradeQuery->where(
                 'adviser',
-                $user->staff->id
+                $user->staff->user_id
             );
         }
 
@@ -66,7 +66,7 @@ class StudentController extends Controller
                 function ($q) use ($user) {
                     $q->where(
                         'adviser',
-                        $user->staff->id
+                        $user->staff->user_id
                     );
                 }
             );

@@ -40,7 +40,7 @@ export default function UsersIndex({ users, filter, search, }: UsersIndexProps) 
         },
     ];
 
-    if (auth?.user?.staff?.latestPosition?.position_name  !== 'Teacher') {
+    if (auth?.user?.staff?.latest_position?.position_name  !== 'Teacher') {
         filterOptions.push(
             {
                 value: 'staff',

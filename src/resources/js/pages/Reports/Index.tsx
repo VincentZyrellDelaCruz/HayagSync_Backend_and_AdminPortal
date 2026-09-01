@@ -1,6 +1,6 @@
 import Pagination from '@/components/ui/pagination';
 import AppLayout from '@/layouts/app-layout';
-import { Paginated, type BreadcrumbItem } from '@/types';
+import { Category, Report, Paginated, type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
 import { AlertTriangle, ArrowRight, Broom, CalendarClock, CheckCircle2, ChevronDown, Clock3, FileWarning, Filter, FolderOpen, Search, ShieldAlert, UserRound, Users, } from 'lucide-react';
 
@@ -9,37 +9,6 @@ declare function route(name: string, params?: Record<string, unknown> | number |
 interface ReportUser {
     first_name: string;
     last_name: string;
-}
-
-interface CurrentAssignee {
-    staff_number?: string | null;
-    user?: ReportUser | null;
-}
-
-interface Category {
-    id: number;
-    category_name: string;
-}
-
-interface ReportStatus {
-    status_name: string;
-}
-
-interface Report {
-    id: string;
-    report_code?: string | null;
-    incident_title: string;
-    description: string | null;
-    location: string | null;
-    incident_date?: string | null;
-    incident_time?: string | null;
-    created_at: string;
-    user: ReportUser | null;
-    category: Category | null;
-    current_status: ReportStatus | null;
-    severity?: string | null;
-    escalation_level?: number | null;
-    current_assignee?: CurrentAssignee | null;
 }
 
 interface ReportsIndexProps {
@@ -551,6 +520,11 @@ export default function ReportsIndex({
                                                         ? `${report.current_assignee.user.last_name}, ${report.current_assignee.user.first_name}`
                                                         : null;
 
+                                                const currentLevel =
+                                                    report.current_level ??
+                                                    report.escalation_level ??
+                                                    null;
+
                                                 const incidentDateTime =
                                                     formatIncidentDateTime(
                                                         report.incident_date,
@@ -601,6 +575,12 @@ export default function ReportsIndex({
                                                                                 status
                                                                             }
                                                                         </span>
+
+                                                                        {report.read_only && (
+                                                                            <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-500 ring-1 ring-slate-200">
+                                                                                Read only
+                                                                            </span>
+                                                                        )}
 
                                                                         {report.severity && (
                                                                             <span
@@ -658,14 +638,14 @@ export default function ReportsIndex({
                                                                         </p>
                                                                     )}
 
-                                                                    {(report.escalation_level ||
+                                                                    {(currentLevel ||
                                                                         assignee) && (
                                                                         <div className="mt-3 flex flex-wrap gap-2">
-                                                                            {report.escalation_level && (
+                                                                            {currentLevel && (
                                                                                 <span className="rounded-lg bg-slate-100 px-2.5 py-1.5 text-[11px] font-medium text-slate-600">
                                                                                     Level{' '}
                                                                                     {
-                                                                                        report.escalation_level
+                                                                                        currentLevel
                                                                                     }
                                                                                 </span>
                                                                             )}

@@ -11,8 +11,8 @@ class ReportAssignment extends Model
     use HasUuids;
 
     protected $casts = [
-        'incident_date' => 'date',
-        'incident_time' => 'datetime',
+        'assigned_at' => 'datetime',
+        'ended_at' => 'datetime',
     ];
 
     protected $fillable = [
@@ -31,12 +31,12 @@ class ReportAssignment extends Model
 
     public function staff_assigned_to(): BelongsTo
     {
-        return $this->belongsTo(Staff::class, 'assigned_to');
+        return $this->belongsTo(Staff::class, 'assigned_to', 'user_id');
     }
 
     public function staff_assigned_by(): BelongsTo
     {
-        return $this->belongsTo(Staff::class, 'assigned_by');
+        return $this->belongsTo(Staff::class, 'assigned_by', 'user_id');
     }
 
 

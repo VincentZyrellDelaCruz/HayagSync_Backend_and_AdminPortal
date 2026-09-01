@@ -53,13 +53,13 @@ class UserController extends Controller
                 // Teacher / Adviser restriction
                 if ($isTeacher && !$isManagement && !$isAdmin) {
 
-                    $sectionIds = GradeSection::where('adviser', $authUser->staff->id)->pluck('id')->toArray();
+                    $sectionIds = GradeSection::where('adviser', $authUser->staff->user_id)->pluck('id')->toArray();
 
                     if (!empty($sectionIds)) {
-                        $query->whereHas('parent_guardian.students', function ($q) use ($sectionIds) {
-                            $q->whereIn('grade_section_id', $sectionIds);
+                        $query->whereHas('parent_guardian.students.enrollments', function ($q) use ($sectionIds) {
+                            $q->whereIn('grade_section_id', $sectionIds)
+                            ->whereNull('ended_at'); // only current enrollment
                         });
-
                     }
                     else {
                         // Teacher has no assigned/advised sections.

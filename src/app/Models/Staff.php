@@ -64,14 +64,14 @@ class Staff extends Model
         return $this->hasMany(SecurityEvent::class, 'resolved_by');
     }
 
-    public function report_assigned_to(): BelongsTo
+    public function report_assigned_to(): HasMany
     {
-        return $this->belongsTo(ReportAssignment::class, 'assigned_to');
+        return $this->hasMany(ReportAssignment::class, 'assigned_to', 'user_id');
     }
 
-    public function report_assigned_by(): BelongsTo
+    public function report_assigned_by(): HasMany
     {
-        return $this->belongsTo(ReportAssignment::class, 'assigned_by');
+        return $this->hasMany(ReportAssignment::class, 'assigned_by', 'user_id');
     }
 
     /*

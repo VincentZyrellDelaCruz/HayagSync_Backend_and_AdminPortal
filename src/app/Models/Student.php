@@ -27,7 +27,6 @@ class Student extends Model
         'birthdate',
         'email',
         'phone_number',
-        'grade_section_id',
         'status'
     ];
 

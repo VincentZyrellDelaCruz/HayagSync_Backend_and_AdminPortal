@@ -158,7 +158,7 @@ export interface DisciplinaryAction {
     staff: Staff | null;
 }
 
-export interface Report {
+/* export interface Report {
     id: string;
     incident_title: string;
     description: string | null;
@@ -167,6 +167,40 @@ export interface Report {
     user: ReportUser | null;
     category: ReportCategory | null;
     current_status: ReportStatus | null;
+} */
+
+export interface Report {
+    id: string;
+    report_code?: string | null;
+    incident_title: string;
+    description: string | null;
+    location: string | null;
+    incident_date?: string | null;
+    incident_time?: string | null;
+    created_at: string;
+    user: ReportUser | null;
+    category: Category | null;
+    current_status: ReportStatus | null;
+    severity?: string | null;
+    escalation_level?: number | null;
+    current_level?: number | null;
+    current_assignee?: CurrentAssignee | null;
+    can_act?: boolean;
+    read_only?: boolean;
+}
+
+export interface Category {
+    id: number;
+    category_name: string;
+}
+
+export interface CurrentAssignee {
+    staff_number?: string | null;
+    user?: ReportUser | null;
+}
+
+export interface ReportStatus {
+    status_name: string;
 }
 
 export interface ReportUser {

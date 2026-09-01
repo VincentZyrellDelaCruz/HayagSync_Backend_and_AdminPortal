@@ -45,6 +45,9 @@ Route::middleware(['auth', 'staff_only'])->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/{id}', 'show')->name('show');
         Route::get('/reports/evidence/{reportEvidence}/stream', 'streamEvidence')->name('evidence.stream');
+        Route::post('/{report}/forward', 'forward')->name('forward');
+        Route::post('/{report}/resolve', 'resolve')->name('resolve');
+        Route::post('/{report}/dismiss', 'dismiss')->name('dismiss');
         Route::put('/{id}', 'update')->name('update');
     });
 

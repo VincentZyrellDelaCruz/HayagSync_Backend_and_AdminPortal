@@ -119,12 +119,12 @@ export default function UserInfo({ user }: UserInfoProps) {
                                             Parent/Guardian
                                         </span>
                                     )}
-                                    {isStaff && user.staff?.is_admin && (
+                                    {isStaff && user.staff?.is_admin ? (
                                         <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-1 text-xs font-semibold text-purple-700">
                                             <ShieldCheck className="h-3 w-3" />
                                             Admin
                                         </span>
-                                    )}
+                                    ) : <></>}
                                     {currentPosition && (
                                         <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
                                             {currentPosition.position_name}
@@ -175,17 +175,23 @@ export default function UserInfo({ user }: UserInfoProps) {
                                         </div>
                                     </div>
                                 </div>
-                                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                                    <div className="flex items-center gap-3">
-                                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
-                                            <GraduationCap className="h-4 w-4" />
-                                        </span>
-                                        <div>
-                                            <p className="text-lg font-bold text-slate-800">{user.staff?.section_advisers?.length ?? 0}</p>
-                                            <p className="text-xs text-slate-500">Section{(user.staff?.section_advisers?.length ?? 0) !== 1 ? 's' : ''} Advised</p>
+
+                                {
+                                    currentPosition.position_name === 'Teacher' && (
+                                        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                                            <div className="flex items-center gap-3">
+                                                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+                                                    <GraduationCap className="h-4 w-4" />
+                                                </span>
+                                                <div>
+                                                    <p className="text-lg font-bold text-slate-800">{user.staff?.section_advisers?.length ?? 0}</p>
+                                                    <p className="text-xs text-slate-500">Section{(user.staff?.section_advisers?.length ?? 0) !== 1 ? 's' : ''} Advised</p>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                </div>
+                                    )
+                                }
+
                             </>
                         )}
                         {isParentGuardian && (
@@ -213,7 +219,7 @@ export default function UserInfo({ user }: UserInfoProps) {
                             <>
                                 <SectionCard title="Staff Information">
                                     <div className="grid grid-cols-1 gap-5 p-6 md:grid-cols-2">
-                                        <InfoField label="Staff No" value={user.staff?.staff_number ?? 'N/A'} />
+                                        <InfoField label="Staff Code" value={user.staff?.staff_number ?? 'N/A'} />
                                         <InfoField label="Gender" value={user.gender ?? 'N/A'} />
                                         <InfoField label="Birthdate" value={formatDate(user.birthdate)} />
                                         <InfoField label="Department" value={currentPosition?.department ?? 'N/A'} />
