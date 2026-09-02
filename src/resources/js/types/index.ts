@@ -229,3 +229,52 @@ export interface StudentReport {
     pivot: ReportPivot;
 }
 
+export interface AiAnalysis {
+    id: string;
+    periodicity: string;
+    period_label: string;
+    output_html: string;
+    created_at: string;
+    updated_at?: string;
+}
+
+export interface DashboardMetric {
+    value: number;
+    change?: number | null;
+}
+
+export interface DashboardCategoryStat {
+    category_name: string;
+    total: number;
+    percentage: number;
+}
+
+export interface DashboardStatusStat {
+    status_name: string;
+    total: number;
+    percentage: number;
+}
+
+export interface DashboardMetrics {
+    weekly_reported: number;
+    weekly_resolved: number;
+    weekly_change: number | null;
+    monthly_reported: number;
+    monthly_change: number | null;
+    academic_year_reported: number;
+    ongoing_reports: number;
+    resolved_reports: number;
+    resolution_rate: number;
+    open_rate: number;
+    academic_year_label: string;
+}
+
+export interface DashboardProps {
+    dashboardMetrics: DashboardMetrics;
+    topCategories: DashboardCategoryStat[];
+    statusDistribution: DashboardStatusStat[];
+    latestAnalysis: AiAnalysis | null;
+    analyses: Paginated<AiAnalysis>;
+    analysisFilter: string;
+}
+

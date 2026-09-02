@@ -11,6 +11,7 @@ use App\Models\Report;
 use App\Models\ReportAssignment;
 use App\Models\ReportStatus;
 use App\Models\Staff;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
@@ -139,7 +140,21 @@ class ReportController extends Controller
 
     public function create()
     {
-        //
+        /* NotificationService::send(
+            receiver: $teacher->user,
+            type: 'report_submitted',
+            title: 'New Incident Report',
+            message: 'A new incident report has been submitted and assigned to you for initial review.',
+            actionUrl: route(
+                'web.reports.show',
+                $report->id
+            ),
+            priority: 'high',
+            data: [
+                'report_id' => (string) $report->id,
+                'report_code' => $report->report_code ?? null,
+            ]
+        ); */
     }
 
     public function store(Request $request)
@@ -262,6 +277,28 @@ class ReportController extends Controller
                 'ip_address' => request()->ip(),
             ]);
         });
+
+        // NOTIFICATION
+        NotificationService::send(
+            receiver: $nextStaff->user,
+            type: 'report_escalated',
+            title: 'Incident Report Escalated',
+            message: sprintf(
+                'Incident report %s has been escalated to your level for review.',
+                $report->report_code ?? $report->id
+            ),
+            actionUrl: route(
+                'web.reports.show',
+                $report->id
+            ),
+            sender: $staff->user,
+            priority: 'high',
+            data: [
+                'report_id' => (string) $report->id,
+                'report_code' => $report->report_code ?? null,
+                'escalation_level' => $nextLevel,
+            ]
+        );
 
         return back()->with('success', 'Incident report escalated successfully.');
     }

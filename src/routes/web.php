@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SecurityCenterController;
@@ -75,9 +76,13 @@ Route::middleware(['auth', 'staff_only'])->group(function () {
             ->name('security.events.resolve');
     });
 
-    /* Route::get('dashboard', function () {
-        return Inertia::render('dashboard');
-    })->name('dashboard'); */
+    Route::prefix('/notifications')->name('notifications.')->controller(NotificationController::class)
+        ->group(function() {
+        Route::get('/', 'index')->name('index');
+        Route::patch('/{inbox}/read', 'markRead')->name('read');
+        Route::patch('/read-all', 'markAllRead')->name('read-all');
+    });
+
 });
 
 

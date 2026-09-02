@@ -6,6 +6,7 @@ use App\Mail\SecurityAlertMail;
 use App\Models\ActivityLog;
 use App\Models\SecurityEvent;
 use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
@@ -98,7 +99,7 @@ class LogFailedLogin
             'status' => 'open',
         ]);
 
-        // NOTIFY ADMINISTRATORS
+        // NOTIFY ADMINISTRATOR
         $admins = User::query()
             ->whereHas('staff', function ($query) {
                 $query->where('is_admin', true);
@@ -107,13 +108,35 @@ class LogFailedLogin
             ->get();
 
         foreach ($admins as $admin) {
-            Mail::to($admin->email)
-                ->queue(
-                    new SecurityAlertMail(
-                        $securityEvent,
-                        $admin
-                    )
-                );
+            // EMAIL
+            Mail::to($admin->email)->queue(
+                new SecurityAlertMail(
+                    $securityEvent,
+                    $admin
+                )
+            );
+
+            // IN-APP NOTIFICATION
+            NotificationService::send(
+                receiver: $admin,
+                type: 'security_alert',
+                title: strtoupper($severity) . ' Security Alert',
+                message: 'A security event requiring administrative review has been detected.',
+                actionUrl: route(
+                    'web.admin.security.index',
+                    [
+                        'tab' => 'security',
+                        'severity' => $severity,
+                        'status' => 'open',
+                    ]
+                ),
+                priority: $severity,
+                data: [
+                    'security_event_id' =>
+                        (string) $securityEvent->id,
+                    'severity' => $severity,
+                ]
+            );
         }
     }
 }

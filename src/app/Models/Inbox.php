@@ -15,7 +15,20 @@ class Inbox extends Model
         'receiver_id',
         'title',
         'message',
+        'notification_type',
+        'priority',
+        'action_url',
+        'data',
         'is_read',
+        'read_at',
+        'expires_at',
+    ];
+
+    protected $casts = [
+        'data' => 'array',
+        'is_read' => 'boolean',
+        'read_at' => 'datetime',
+        'expires_at' => 'datetime',
     ];
 
     public function sender(): BelongsTo
