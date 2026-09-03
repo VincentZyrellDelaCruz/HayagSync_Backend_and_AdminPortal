@@ -158,16 +158,15 @@ export interface DisciplinaryAction {
     staff: Staff | null;
 }
 
-/* export interface Report {
-    id: string;
-    incident_title: string;
-    description: string | null;
-    location: string | null;
-    created_at: string;
-    user: ReportUser | null;
-    category: ReportCategory | null;
-    current_status: ReportStatus | null;
-} */
+export interface PageProps {
+    name?: string;
+    email?: string | null;
+    method?: 'email' | 'phone';
+    phone?: string | null;
+    hasPhone?: boolean;
+    destination?: string | null;
+    [key: string]: unknown;
+}
 
 export interface Report {
     id: string;

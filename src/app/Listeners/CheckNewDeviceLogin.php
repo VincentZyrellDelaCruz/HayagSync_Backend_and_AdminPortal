@@ -27,6 +27,12 @@ class CheckNewDeviceLogin
     public function handle(Login $event): void
     {
         $user = $event->user;
+        $userId = $user->id;
+
+        if (session("otp_verified_{$userId}") || session('otp_verifying')) {
+            return;
+        }
+
         $agent = new Agent();
 
         $deviceName = $agent->device() ?? 'Unknown';
@@ -34,41 +40,27 @@ class CheckNewDeviceLogin
         $ip         = request()->ip();
 
         // Check if this device has been seen before
-        $known = UserLoginHistory::where('user_id', $user->id)
+        $known = UserLoginHistory::where('user_id', $userId)
             ->where('device_name', $deviceName)
-            ->where('ip_address', $ip)
+            ->where('browser', $browser)
             ->exists();
 
-        if (!$known) {
-            // Generate OTP
-            $otp = rand(100000, 999999);
-            $key = "otp:{$user->id}";
-            Cache::put($key, $otp, now()->addMinutes(5)); // expires in 5 minutes
+        if ($known) return;
 
-            // Redirect user to OTP selection page
-            session([
-                'pending_otp' => true,
-                'otp_user_id' => $user->id,
-                'otp_email'   => $user->email,
-                'otp_phone'   => $user->phone_number,
-            ]);
+        // Generate OTP
+        $otp = (string) random_int(100000, 999999);
 
-            session()->save();
+        Cache::put("otp:{$userId}", $otp, now()->addMinutes(5)); // Expires in 5 minutes
 
-            Auth::logout();
-
-            // dd(session('otp_email'));
-            // redirect()->route('otp.select')->send();
-        } else {
-            // Record login history if device is known
-            UserLoginHistory::create([
-                'user_id'    => $user->id,
-                'device_name'=> $deviceName,
-                'browser'    => $browser,
-                'ip_address' => $ip,
-                'location'   => null,
-                'login_time' => now(),
-            ]);
-        }
+        // Redirect user to OTP selection page
+        session([
+            'pending_otp' => true,
+            'otp_user_id' => $userId,
+            'otp_email'   => $user->email,
+            'otp_phone'   => $user->phone_number,
+            'otp_device_name' => $deviceName,
+            'otp_browser' => $browser,
+            'otp_ip' => $ip,
+        ]);
     }
 }

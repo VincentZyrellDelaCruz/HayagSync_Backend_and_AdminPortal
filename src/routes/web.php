@@ -18,18 +18,17 @@ use Inertia\Inertia;
 
 Route::get('/', function () {
     if (Auth::check()) {
-        return Inertia::render('dashboard');
+        return redirect()->route('dashboard');
     }
     return Inertia::render('auth/login');
-})->name('home');;
+})->name('home');
 
-Route::prefix('/otp')->group(function () {
-    Route::get('/', [OtpController::class, 'index'])->name('otp.select');
-    Route::post('/', [OtpController::class, 'send'])->name('otp.send');
-    Route::get('/verify', [OtpController::class, 'verifyForm'])->name('otp.verify');
-    Route::post('/verify', [OtpController::class, 'verify'])->name('otp.verify.submit');
-});;
-
+Route::prefix('/otp')->name('otp.')->controller(OtpController::class)->group(function () {
+    Route::get('/', 'index')->name('select');
+    Route::post('/', 'send')->name('send');
+    Route::get('/verify', 'verifyForm')->name('verify');
+    Route::post('/verify', 'verify')->name('verify.submit');
+});
 
 Route::middleware(['auth', 'staff_only'])->group(function () {
 

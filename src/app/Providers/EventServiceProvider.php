@@ -8,6 +8,7 @@ class EventServiceProvider extends ServiceProvider
 {
     protected $listen = [
         \Illuminate\Auth\Events\Login::class => [
+            \App\Listeners\CheckNewDeviceLogin::class,
             \App\Listeners\LogSuccessfulLogin::class,
             \App\Listeners\ClearFailedLoginCounter::class,
         ],

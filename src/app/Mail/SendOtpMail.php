@@ -9,20 +9,19 @@ use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
+use Throwable;
 
-class SendOtpMail extends Mailable
+class SendOtpMail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
-    protected string $otp;
+    public int $tries = 3;
+    public array $backoff = [10, 30, 60];
 
     /**
      * Create a new message instance.
      */
-    public function __construct(string $otp)
-    {
-        $this->otp = $otp;
-    }
+    public function __construct(public string $otp) {}
 
     /**
      * Get the message envelope.
@@ -40,7 +39,7 @@ class SendOtpMail extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'emails.otp-mail',
+            view: 'emails.security.otp-mail',
             with: [
                 'otp' => $this->otp,
             ]
@@ -55,5 +54,19 @@ class SendOtpMail extends Mailable
     public function attachments(): array
     {
         return [];
+    }
+
+    public function failed(?Throwable $exception): void
+    {
+        if ($exception) {
+            logger()->error('SecurityAlertMail failed.', [
+                'security_event_id' => $this->securityEvent->id ?? null,
+                'admin_id' => $this->admin->id ?? null,
+                'admin_email' => $this->admin->email ?? null,
+                'exception' => $exception::class,
+                'message' => $exception->getMessage(),
+                'trace' => $exception->getTraceAsString(),
+            ]);
+        }
     }
 }
