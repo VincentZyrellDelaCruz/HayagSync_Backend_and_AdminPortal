@@ -166,7 +166,7 @@ class UserController extends Controller
             });
         }
 
-        $users = $query->paginate(10);
+        $users = $query->paginate(10)->withQueryString();
 
         return Inertia::render('Users/Index', compact('users', 'filter', 'search'));
     }
@@ -180,98 +180,5 @@ class UserController extends Controller
         ]);
 
         return Inertia::render('Users/UserInfo', compact('user'));
-    }
-
-    public function getStaff()
-    {
-        $users = User::with(['staff.positions'])->whereHas('staff')->select('users.*');
-
-        return DataTables::of($users)
-            ->addColumn('staff_number', function ($user) {
-                return $user->staff && $user->staff->staff_number
-                    ? $user->staff->staff_number
-                    : 'Unknown';
-            })
-            ->addColumn('position', function ($user) {
-                if (!$user->staff || $user->staff->positions->isEmpty()) {
-                    return 'Unknown';
-                }
-
-                $latestPosition = $user->staff->positions
-                    ->sortByDesc('pivot.assigned_at')
-                    ->first();
-
-                return $latestPosition ? $latestPosition->position_name : 'Unknown';
-            })
-            ->addColumn('department', function ($user) {
-                return $user->staff && $user->staff->department
-                    ? $user->staff->department
-                    : 'Unknown';
-            })
-            ->addColumn('action', function () {
-                return '<div class="d-flex gap-1">
-                    <a href=""
-                        class="inline-flex items-center rounded-md px-2 py-1 bg-gray-100 text-gray-700 hover:bg-gray-200"
-                        title="Edit">
-                        <i class="bi bi-pencil text-[13px]"></i>
-                    </a>
-
-                    <a href=""
-                        class="inline-flex items-center rounded-md px-2 py-1 bg-gray-100 text-gray-700 hover:bg-gray-200"
-                        title="Update Status">
-                        <i class="bi bi-shield-fill text-[13px]"></i>
-                    </a>
-
-                    <a href=""
-                        class="inline-flex items-center rounded-md px-2 py-1 bg-gray-100 text-red-600 hover:bg-gray-200"
-                        title="Deactivate">
-                        <i class="bi bi-person-x-fill text-[13px]"></i>
-                    </a>
-
-                </div>';
-            })
-            ->rawColumns(['action'])
-            ->make(true);
-    }
-
-    public function getParentGuardian()
-    {
-        $users = User::with(['parent_guardian'])->whereHas('parent_guardian')->select('users.*');
-
-        return DataTables::of($users)
-            ->addColumn('parent_code', function ($user) {
-                return $user->parent_guardian && $user->parent_guardian->parent_code
-                    ? $user->parent_guardian->parent_code
-                    : 'Unknown';
-            })
-            ->addColumn('occupation', function ($user) {
-                return $user->parent_guardian && $user->parent_guardian->occupation
-                    ? $user->parent_guardian->occupation
-                    : 'Unknown';
-            })
-            ->addColumn('action', function () {
-                return '<div class="d-flex gap-1">
-                    <a href=""
-                        class="inline-flex items-center rounded-md px-2 py-1 bg-gray-100 text-gray-700 hover:bg-gray-200"
-                        title="Edit">
-                        <i class="bi bi-pencil text-[13px]"></i>
-                    </a>
-
-                    <a href=""
-                        class="inline-flex items-center rounded-md px-2 py-1 bg-gray-100 text-gray-700 hover:bg-gray-200"
-                        title="Update Status">
-                        <i class="bi bi-shield-fill text-[13px]"></i>
-                    </a>
-
-                    <a href=""
-                        class="inline-flex items-center rounded-md px-2 py-1 bg-gray-100 text-red-600 hover:bg-gray-200"
-                        title="Deactivate">
-                        <i class="bi bi-person-x-fill text-[13px]"></i>
-                    </a>
-
-                </div>';
-            })
-            ->rawColumns(['action'])
-            ->make(true);
     }
 }
