@@ -277,3 +277,53 @@ export interface DashboardProps {
     analysisFilter: string;
 }
 
+export interface ImportBatch {
+    id: string;
+    initiated_by: string;
+    import_type: 'students' | 'staff';
+    mode: 'reference_only' | 'full_roster';
+    status: string;
+    stage: string;
+    progress: number;
+    total_rows: number;
+    valid_rows: number;
+    invalid_rows: number;
+    processed_rows: number;
+    created_count: number;
+    updated_count: number;
+    deactivated_count: number;
+    error_message?: string | null;
+    started_at?: string | null;
+    finished_at?: string | null;
+}
+
+export interface InitiatedBy {
+    id: string;
+    first_name: string;
+    last_name: string;
+}
+
+export interface ImportBatchView extends ImportBatch {
+    file_name: string;
+    import_type: 'students' | 'staff';
+    mode: 'reference_only' | 'full_roster';
+    initiatedBy?: InitiatedBy | null;
+}
+
+export interface ImportProgressEvent {
+    batch: ImportBatchView;
+}
+
+export interface ImportChange {
+    id: string;
+    row_number: number;
+    identifier: string;
+    validation_status: string;
+    processing_status: string;
+    action?: string | null;
+    raw_data?: Record<string, unknown> | null;
+    errors?: string[] | null;
+    before_data?: Record<string, unknown> | null;
+    after_data?: Record<string, unknown> | null;
+}
+

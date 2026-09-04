@@ -8,6 +8,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\Web\ActivityLogController;
 use App\Http\Controllers\Web\ChatController;
 use App\Http\Controllers\Web\DashboardController;
+use App\Http\Controllers\Web\DataImportController;
 use App\Http\Controllers\Web\MeetingController;
 use App\Http\Controllers\Web\OtpController;
 use App\Http\Controllers\Web\ReportController;
@@ -23,6 +24,7 @@ Route::get('/', function () {
     return Inertia::render('auth/login');
 })->name('home');
 
+// ONE-TIME PASSWORD (OTP)
 Route::prefix('/otp')->name('otp.')->controller(OtpController::class)->group(function () {
     Route::get('/', 'index')->name('select');
     Route::post('/', 'send')->name('send');
@@ -34,13 +36,16 @@ Route::middleware(['auth', 'staff_only'])->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['verified'])->name('dashboard');
 
+    // PROFILE CENTER
     Route::get('/profile', [ProfileController::class, 'edit'])->name('settings.profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('settings.profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('settings.profile.destroy');
 
+    // MEETINGS
     Route::put('/meetings/{meeting}/{action}', [MeetingController::class, 'update'])->name('web.meetings.update');
     Route::post('/meetings/{meeting}/chat', [ChatController::class, 'store'])->name('web.chat_messages.store');
 
+    // BULLYING INCIDENT REPORT MANAGEMENT
     Route::prefix('/reports')->name('web.reports.')->controller(ReportController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/{id}', 'show')->name('show');
@@ -51,30 +56,30 @@ Route::middleware(['auth', 'staff_only'])->group(function () {
         Route::put('/{id}', 'update')->name('update');
     });
 
-    /* Route::resource('/reports', ReportController::class)->names([
-        'index'   => 'web.reports.index',
-        'create'  => 'web.reports.create',
-        'store'   => 'web.reports.store',
-        'show'    => 'web.reports.show',
-        'edit'    => 'web.reports.edit',
-        'update'  => 'web.reports.update',
-    ]); */
-
+    // STUDENT DIRECTORY
     Route::get('/students', [StudentController::class, 'index'])->name('web.students.index');
     Route::get('/students/{student}', [StudentController::class, 'show'])->name('web.students.show');
 
+    // USER DIRECTORY (PARENT/GUARDIAN AND STAFF)
     Route::get('/users', [UserController::class, 'index'])->name('web.users.index');
     Route::get('/users/{user}', [UserController::class, 'show'])->name('web.users.show');
 
-    /* Route::get('/admin/activity_log', [ActivityLogController::class, 'index'])->middleware(['can:admin-only'])
-        ->name('web.activity_logs.index'); */
-
-    Route::middleware('admin_only')->prefix('admin')->name('web.admin.')->group(function () {
+    // ADMIN-ONLY ROUTES
+    Route::middleware('admin_only')->prefix('/admin')->name('web.admin.')->group(function () {
+        // SECURITY CENTER
         Route::get('/security', [SecurityCenterController::class, 'index'])->name('security.index');
         Route::patch('/security/events/{securityEvent}/resolve', [SecurityCenterController::class, 'resolve'])
             ->name('security.events.resolve');
+
+        // DATA IMPORT CENTER (ETL PROCESSING)
+        Route::prefix('/imports')->name('imports.')->controller(DataImportController::class)->group(function() {
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('/{batch}/status', 'status')->name('status');
+        });
     });
 
+    // NOTIFICATION/INBOX HUB
     Route::prefix('/notifications')->name('notifications.')->controller(NotificationController::class)
         ->group(function() {
         Route::get('/', 'index')->name('index');

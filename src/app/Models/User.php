@@ -127,4 +127,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(MeetingParticipant::class);
     }
+
+    public function data_import_batches(): HasMany
+    {
+        return $this->hasMany(DataImportBatch::class, 'initiated_by');
+    }
 }

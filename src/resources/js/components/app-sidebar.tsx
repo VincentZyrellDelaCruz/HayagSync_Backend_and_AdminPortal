@@ -4,7 +4,7 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { GraduationCap, LayoutGrid, Megaphone, Shield, Users, Wrench } from 'lucide-react';
+import { GraduationCap, Import, LayoutGrid, Megaphone, Shield, Users, Wrench } from 'lucide-react';
 import AppLogo from './app-logo';
 
 export function AppSidebar() {
@@ -37,6 +37,11 @@ export function AppSidebar() {
                 title: 'Security Center',
                 url: route('web.admin.security.index'),
                 icon: Shield,
+            },
+            {
+                title: 'Data Import/Update',
+                url: route('web.admin.imports.index'),
+                icon: Import,
             },
             {
                 title: 'Admin Settings',
