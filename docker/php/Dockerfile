@@ -4,13 +4,13 @@ FROM php:8.3-fpm
 RUN apt-get update && apt-get install -y \
     git curl zip unzip libzip-dev libpng-dev libjpeg62-turbo-dev \
     libfreetype6-dev libonig-dev libxml2-dev libicu-dev \
-    default-mysql-client supervisor \
+    libpq-dev supervisor \
     && rm -rf /var/lib/apt/lists/*
 
 # PHP extension configuration
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j"$(nproc)" \
-        pdo_mysql \
+        pdo_pgsql \
         mbstring \
         exif \
         pcntl \

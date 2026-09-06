@@ -10,7 +10,7 @@ import {
 } from '@/types';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { CheckCircle2, Database, Eye, FileSpreadsheet, LoaderCircle, Upload, UsersRound, X, XCircle } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useEcho } from '@laravel/echo-react';
 
 declare function route(name: string, params?: Record<string, unknown> | number | string): string;
@@ -214,6 +214,16 @@ export default function DataImportIndex({ batches, activeBatch, selectedBatch, c
 
     const isRunning = batchStatus !== null && !terminalStatuses.includes(batchStatus.status);
     const selectedChanges = changes?.data ?? [];
+
+    const selectedChangeRows = useMemo(() => selectedChanges.map((change) => ({
+                change,
+                fields: getChangedFields(
+                    change.before_data,
+                    change.after_data
+                ),
+            })),
+        [selectedChanges]
+    );
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -480,6 +490,9 @@ export default function DataImportIndex({ batches, activeBatch, selectedBatch, c
                                                 <td className="px-5 py-4 text-right">
                                                     <Link
                                                         href={route('web.admin.imports.index', { batch: batch.id })}
+                                                        only={['selectedBatch', 'changes']}
+                                                        preserveState
+                                                        preserveScroll
                                                         className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-200 hover:text-slate-900"
                                                     >
                                                         <Eye className="h-3.5 w-3.5" />
@@ -525,7 +538,10 @@ export default function DataImportIndex({ batches, activeBatch, selectedBatch, c
 
                                             <Link
                                                 href={route('web.admin.imports.index', { batch: batch.id })}
-                                                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-200"
+                                                only={['selectedBatch', 'changes']}
+                                                preserveState
+                                                preserveScroll
+                                                className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-200 hover:text-slate-900"
                                             >
                                                 <Eye className="h-3.5 w-3.5" />
                                                 Changes
@@ -564,6 +580,9 @@ export default function DataImportIndex({ batches, activeBatch, selectedBatch, c
 
                             <Link
                                 href={route('web.admin.imports.index')}
+                                only={['selectedBatch', 'changes']}
+                                preserveState
+                                preserveScroll
                                 className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
                                 aria-label="Close"
                             >
@@ -582,11 +601,9 @@ export default function DataImportIndex({ batches, activeBatch, selectedBatch, c
                                 </div>
                             </div>
 
-                            {selectedChanges.length > 0 ? (
+                            {selectedChangeRows.length > 0 ? (
                                 <div className="divide-y divide-slate-200">
-                                    {selectedChanges.map((change) => {
-                                        const fields = getChangedFields(change.before_data, change.after_data);
-
+                                    {selectedChangeRows.map(({ change, fields }) => {
                                         return (
                                             <div key={change.id} className="p-5">
                                                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
