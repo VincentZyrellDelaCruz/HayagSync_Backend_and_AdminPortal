@@ -1,4 +1,4 @@
-# __HayagSync Backend and Web Portal (Laravel)__
+# HayagSync Backend and Web Portal (Laravel)
 
 This project uses WSL2 + Ubuntu + nginx + opcache + Docker machine.
 
@@ -8,7 +8,7 @@ This project uses WSL2 + Ubuntu + nginx + opcache + Docker machine.
 
 A simple guide for groupmates who need to run the **HayagSync Laravel 13 project** on Windows.
 
-> **NOTE:** You do not need to install PHP, MySQL, Redis, Composer, or Node.js directly on Windows. Docker will run these for you.
+> **NOTE:** You do not need to install PHP, Redis, Composer, or Node.js directly on Windows. Docker will run these for you. HayagSync's database is hosted on **Supabase (PostgreSQL)** — you don't need to install a database locally either.
 
 ---
 
@@ -191,8 +191,6 @@ hayagsync-web/
 │   ├── nginx/
 │   │   └── conf.d/
 │   │       └── app.conf
-│   └── mysql/
-│       └── my.cnf
 ├── certs/
 ├── src/
 │   ├── app/
@@ -212,6 +210,8 @@ The Laravel application is inside:
 ```text
 src/
 ```
+
+> There's no `docker/mysql/` folder — HayagSync's database is **Supabase (PostgreSQL)**, hosted externally, not run inside this Docker setup.
 
 ---
 
@@ -246,7 +246,7 @@ echo "GID=$(id -g)" >> .env
 
 This helps Docker create files with your Ubuntu user's permissions instead of root permissions.
 
-> This `.env` is the Docker Compose environment file in the **project root**.  
+> This `.env` is the Docker Compose environment file in the **project root**.
 > Laravel has its own `.env` inside `src/`.
 
 ---
@@ -317,16 +317,19 @@ Make sure the Laravel environment file exists:
 src/.env
 ```
 
-The important Docker database settings should look like:
+HayagSync's database is **Supabase (PostgreSQL)**, not a local database — the important settings should look like:
 
 ```dotenv
-DB_CONNECTION=mysql
-DB_HOST=mysql
-DB_PORT=3306
-DB_DATABASE=hayagsync
-DB_USERNAME=hayagsync
-DB_PASSWORD=secret
+DB_CONNECTION=pgsql
+DB_HOST=aws-0-YOUR-REGION.pooler.supabase.com
+DB_PORT=5432
+DB_DATABASE=postgres
+DB_USERNAME=postgres.YOUR_PROJECT_REF
+DB_PASSWORD=YOUR_SUPABASE_DATABASE_PASSWORD
+DB_SSLMODE=require
 ```
+
+> Ask the project owner for the actual `DB_HOST`, `DB_USERNAME`, and `DB_PASSWORD` values — these come from **Supabase Dashboard → Connect → Session pooler** (port `5432`). Don't use the **Direct connection** or **Transaction pooler** options for this project.
 
 Redis:
 
@@ -357,7 +360,7 @@ Sanctum:
 SANCTUM_STATEFUL_DOMAINS=hayagsync.test,localhost
 ```
 
-> **Do not commit real API keys, email passwords, Twilio credentials, or other secrets to Git.** Ask the project owner for the correct local `.env` values if they are not already provided.
+> **Do not commit real API keys, email passwords, Twilio credentials, Supabase database passwords, or other secrets to Git.** Ask the project owner for the correct local `.env` values if they are not already provided.
 
 ---
 
@@ -382,12 +385,13 @@ You should see services such as:
 ```text
 app
 nginx
-mysql
 redis
 queue
 reverb
 node
 ```
+
+> No `mysql` container — HayagSync's database runs on Supabase, outside Docker.
 
 ---
 
@@ -622,25 +626,28 @@ docker compose restart app nginx
 
 ## D. Database connection error
 
-Check MySQL:
-
-```bash
-docker compose logs mysql
-```
-
-Then check:
+There's no local database container to check logs for — HayagSync's database is on **Supabase**. Instead, check whether Laravel can actually reach it:
 
 ```bash
 docker compose exec app php artisan migrate:status
 ```
 
-The Laravel `.env` must use:
+Also confirm PostgreSQL support is installed in the container:
 
-```dotenv
-DB_HOST=mysql
+```bash
+docker compose exec app php -m | grep pgsql
 ```
 
-**Do not use `localhost` for MySQL inside the Laravel container.**
+You should see `pdo_pgsql` and `pgsql` listed.
+
+The Laravel `.env` must use your Supabase **Session pooler** host (looks like `aws-0-region.pooler.supabase.com`), **not** `localhost` or `127.0.0.1`, and must include:
+
+```dotenv
+DB_CONNECTION=pgsql
+DB_SSLMODE=require
+```
+
+If it still fails, the most common cause is copying the wrong connection type from Supabase's **Connect** panel — double-check it's **Session pooler** (port `5432`), not **Direct connection** (IPv6-only, usually unreachable from WSL) or **Transaction pooler** (meant for serverless apps, not this one).
 
 ---
 
@@ -740,25 +747,23 @@ Then restart the browser.
 
 # XVIII. Important: Do Not Delete Docker Volumes
 
-The MySQL database is stored in a Docker volume.
+HayagSync's database lives on **Supabase**, not in a local Docker volume — so `docker compose down` (with or without `-v`) never affects your actual application data.
 
-Normally:
+The only Docker volume left locally is Redis's:
 
-```bash
-docker compose down
+```text
+redis_data
 ```
 
-**does not delete your database.**
-
-However, this command deletes the volumes:
+This just holds cached sessions and queue data. Running:
 
 ```bash
 docker compose down -v
 ```
 
-That can delete the local MySQL/Redis data.
+will clear that local Redis data (you'd get logged out, and any queued jobs would be lost), but **your Supabase database is completely unaffected** since it's a separate, external service.
 
-### Avoid this unless you intentionally want to reset the database.
+### Avoid `-v` anyway unless you intentionally want to clear local sessions/queue state.
 
 ---
 
@@ -829,7 +834,7 @@ docker compose exec app composer install
 # Generate key if needed
 docker compose exec app php artisan key:generate
 
-# Database
+# Database (Supabase — make sure src/.env has the correct DB_* values first)
 docker compose exec app php artisan migrate
 
 # Storage
@@ -854,29 +859,8 @@ https://hayagsync.test
 
 You do **not** need to manually install every technology.
 
-Docker runs the project's services for you:
+Docker runs most of the project's services for you — except the database, which is hosted externally on **Supabase**:
 
-```text
-                    Your Windows PC
-                          │
-                    Docker Desktop
-                          │
-                        WSL2
-                          │
-                       Ubuntu
-                          │
-                  HayagSync Docker
-                          │
-        ┌─────────────────┼─────────────────┐
-        │                 │                 │
-      Nginx            PHP/Laravel        Node/Vite
-        │                 │
-        │          ┌──────┴──────┐
-        │          │             │
-        │        MySQL          Redis
-        │
-        └──────── Reverb / WebSocket
-```
 
 ### Main services
 
@@ -884,15 +868,16 @@ Docker runs the project's services for you:
 |---|---|
 | `app` | Laravel/PHP application |
 | `nginx` | Web server and HTTPS |
-| `mysql` | HayagSync database |
 | `redis` | Cache, sessions, and queues |
 | `queue` | Processes Laravel background jobs |
 | `reverb` | Real-time WebSocket communication |
 | `node` | React/Inertia/Vite development server |
 
+> HayagSync's database (PostgreSQL) is hosted externally on **Supabase** — it is not a Docker container and does not run on your machine. Your `app` container reaches it over the internet via `DB_HOST` in `src/.env`.
+
 ---
 
-# 22. Additinal Debugging
+# 22. Additional Debugging
 
 If HayagSync does not work, send these outputs to the project owner:
 
@@ -912,11 +897,13 @@ If the problem involves the frontend:
 docker compose logs --tail=100 node
 ```
 
-If it involves the database:
+If it involves the database, there's no local container to pull logs from — instead send:
 
 ```bash
-docker compose logs --tail=100 mysql
+docker compose exec app php artisan migrate:status
 ```
+
+and confirm the `DB_*` values in `src/.env` match Supabase Dashboard → **Connect → Session pooler**.
 
 This makes debugging much easier.
 
@@ -936,6 +923,7 @@ Before saying **"it doesn't work"**, check:
 - [ ] Project is inside WSL
 - [ ] Project `.env` exists
 - [ ] `src/.env` exists
+- [ ] `src/.env` has correct Supabase `DB_*` values (Session pooler, port 5432, `DB_SSLMODE=require`)
 - [ ] `docker compose up -d --build` completed
 - [ ] `docker compose ps` shows the services running
 - [ ] `composer install` completed
