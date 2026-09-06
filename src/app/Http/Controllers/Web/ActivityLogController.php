@@ -11,8 +11,27 @@ class ActivityLogController extends Controller
     public function index(Request $request)
     {
         $search = $request->get('search');
+
+        $allowedSortFields = [
+            'created_at',
+            'action_type',
+            'module',
+            'ip_address',
+        ];
+
         $sortField = $request->get('sort', 'created_at');
-        $sortOrder = $request->get('order', 'desc');
+
+        if (!in_array($sortField, $allowedSortFields, true)) {
+            $sortField = 'created_at';
+        }
+
+        $sortOrder = strtolower(
+            $request->get('order', 'desc')
+        );
+
+        if (!in_array($sortOrder, ['asc', 'desc'], true)) {
+            $sortOrder = 'desc';
+        }
 
         $query = ActivityLog::with('user');
 

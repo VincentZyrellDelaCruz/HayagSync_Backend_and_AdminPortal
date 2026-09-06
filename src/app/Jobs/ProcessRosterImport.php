@@ -243,6 +243,8 @@ class ProcessRosterImport implements ShouldQueue
                     'student_number' => ['required', 'string', 'max:50'],
                     'first_name' => ['required', 'string', 'max:100'],
                     'last_name' => ['required', 'string', 'max:100'],
+                    'middle_name' => ['nullable', 'string', 'max:100'],
+                    'suffix' => ['nullable', 'string', 'max:50'],
                     'gender' => ['required', 'in:Male,Female,Others'],
                     'birthdate' => ['required', 'date'],
                     'email' => ['required', 'email', 'max:255'],
@@ -255,6 +257,9 @@ class ProcessRosterImport implements ShouldQueue
                     'staff_number' => ['required', 'string', 'max:50'],
                     'first_name' => ['required', 'string', 'max:100'],
                     'last_name' => ['required', 'string', 'max:100'],
+                    'middle_name' => ['nullable', 'string', 'max:100'],
+                    'suffix' => ['nullable', 'string', 'max:50'],
+                    'gender' => ['required', 'in:Male,Female,Others'],
                     'birthdate' => ['required', 'date'],
                     'email' => ['required', 'email', 'max:255'],
                     'department' => ['required', 'string', 'max:255'],
@@ -463,6 +468,7 @@ class ProcessRosterImport implements ShouldQueue
             $user->last_name = $row['last_name'];
             $user->middle_name = $row['middle_name'] ?? null;
             $user->suffix = $row['suffix'] ?? null;
+            $user->gender = $row['gender'] ?? 'Others';
             $user->birthdate = $row['birthdate'];
             $user->email = $row['email'];
             $user->password = Hash::make(Str::random(48));
@@ -495,6 +501,7 @@ class ProcessRosterImport implements ShouldQueue
             $user->last_name = $row['last_name'];
             $user->middle_name = $row['middle_name'] ?? null;
             $user->suffix = $row['suffix'] ?? null;
+            $user->gender = $row['gender'] ?? 'Others';
             $user->birthdate = $row['birthdate'];
             $user->email = $row['email'];
             $user->phone_number = $row['phone_number'] ?? null;

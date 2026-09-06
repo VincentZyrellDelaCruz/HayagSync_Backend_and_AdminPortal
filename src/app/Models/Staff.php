@@ -47,15 +47,11 @@ class Staff extends Model
         return $this->hasMany(DisciplinaryAction::class, 'staff_id');
     }
 
-    /* public function latestPosition()
-    {
-        return $this->positions()->orderByDesc('staff_position.assigned_at')->first();
-    } */
-
     protected function latestPosition(): Attribute
     {
-        return Attribute::get(fn () =>
-            $this->positions()->orderByDesc('staff_position.assigned_at')->first()
+        return Attribute::get(fn () => $this->relationLoaded('positions')
+            ? $this->positions->sortByDesc('pivot.assigned_at')->first()
+            : $this->positions()->orderByDesc('staff_position.assigned_at')->first()
         );
     }
 
