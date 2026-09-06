@@ -73,18 +73,7 @@ class Report extends Model
 
     public function latest_assignment(): HasOne
     {
-        return $this->hasOne(ReportAssignment::class, 'report_id')
-            ->whereRaw(
-                '"report_assignments"."id" = (
-                    SELECT ra.id
-                    FROM report_assignments AS ra
-                    WHERE ra.report_id = "report_assignments"."report_id"
-                    ORDER BY
-                        ra.assigned_at DESC NULLS LAST,
-                        ra.created_at DESC NULLS LAST
-                    LIMIT 1
-                )'
-            );
+        return $this->hasOne(ReportAssignment::class, 'report_id')->latestOfMany();
     }
 
     public function get_latest_level()
@@ -94,18 +83,7 @@ class Report extends Model
 
     public function latest_update(): HasOne
     {
-        return $this->hasOne(ReportUpdate::class, 'report_id')
-            ->whereRaw(
-                '"report_updates"."id" = (
-                    SELECT ru.id
-                    FROM report_updates AS ru
-                    WHERE ru.report_id = "report_updates"."report_id"
-                    ORDER BY
-                        ru.created_at DESC,
-                        ru.updated_at DESC NULLS LAST
-                    LIMIT 1
-                )'
-            );
+        return $this->hasOne(ReportUpdate::class, 'report_id')->latestOfMany();
     }
 
     public function disciplinary_actions(): HasMany

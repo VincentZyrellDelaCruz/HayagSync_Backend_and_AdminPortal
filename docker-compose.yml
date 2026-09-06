@@ -12,6 +12,8 @@ services:
       - ./src:/var/www/html
       - ./seed_media:/seed_media
     depends_on:
+      mysql:
+        condition: service_healthy
       redis:
         condition: service_started
     networks:
@@ -30,6 +32,28 @@ services:
       - ./certs:/etc/nginx/certs
     depends_on:
       - app
+    networks:
+      - hayagsync
+
+  mysql:
+    image: mysql:8.0
+    container_name: hayagsync-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: hayagsync
+      MYSQL_USER: hayagsync
+      MYSQL_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: root_secret
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot_secret"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks:
       - hayagsync
 
@@ -59,6 +83,7 @@ services:
     depends_on:
       - app
       - redis
+      - mysql
     networks:
       - hayagsync
 
@@ -95,6 +120,7 @@ services:
       - hayagsync
 
 volumes:
+  mysql_data:
   redis_data:
 
 networks:

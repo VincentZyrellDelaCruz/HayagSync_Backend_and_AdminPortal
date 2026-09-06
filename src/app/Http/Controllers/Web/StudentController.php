@@ -17,6 +17,10 @@ class StudentController extends Controller
         $grade    = trim($request->get('grade', ''));
         $section  = trim($request->get('section', ''));
 
+        $query = Student::with(['grade_sections' => function ($q) {
+            $q->orderByDesc('enrollments.enrolled_at');
+        }]);
+
         $user = Auth::user();
 
         $isAdviser = $user->staff && $user->staff->latestPosition?->position_name === 'Teacher';

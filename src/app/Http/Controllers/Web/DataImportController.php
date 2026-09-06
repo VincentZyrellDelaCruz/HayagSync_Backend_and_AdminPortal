@@ -8,7 +8,6 @@ use App\Models\DataImportBatch;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rules\File;
 use Inertia\Inertia;
 
@@ -16,98 +15,58 @@ class DataImportController extends Controller
 {
     public function index(Request $request)
     {
+        $batches = DataImportBatch::with(
+            'initiatedBy:id,first_name,last_name'
+        )
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
+
+        $activeBatch = DataImportBatch::with(
+            'initiatedBy:id,first_name,last_name'
+        )
+            ->where('initiated_by', Auth::id())
+            ->whereIn(
+                'status',
+                ['queued', 'validating', 'processing']
+            )
+            ->latest()
+            ->first();
+
         $selectedBatch = null;
-        $selectedBatchResolved = false;
+        $changes = null;
 
-        $resolveSelectedBatch = function () use ($request, &$selectedBatch, &$selectedBatchResolved) {
-            if ($selectedBatchResolved) return $selectedBatch;
-
-            $selectedBatchResolved = true;
-
-            if (!$request->filled('batch')) return $selectedBatch = null;
-
-            $batch = DataImportBatch::findOrFail($request->query('batch'));
-
-            abort_unless(
-                (string) $batch->initiated_by === (string) Auth::id() ||
-                    Auth::user()?->staff?->is_admin, 403
+        if ($request->filled('batch')) {
+            $selectedBatch = DataImportBatch::with(
+                'initiatedBy:id,first_name,last_name'
+            )->findOrFail(
+                $request->query('batch')
             );
 
-            return $selectedBatch = $batch;
-        };
+            abort_unless(
+                (string) $selectedBatch->initiated_by ===
+                    (string) Auth::id() ||
+                    Auth::user()?->staff?->is_admin,
+                403
+            );
+
+            $changes = $selectedBatch->rows()
+                ->orderBy('row_number')
+                ->paginate(
+                    50,
+                    ['*'],
+                    'changes_page'
+                )
+                ->withQueryString();
+        }
 
         return Inertia::render(
             'Admin/DataImport/Index',
             [
-                'batches' => fn () => DataImportBatch::with(
-                    'initiatedBy:id,first_name,last_name'
-                )->latest()->paginate(10)->withQueryString(),
-
-                'activeBatch' => fn () =>
-                    DataImportBatch::with('initiatedBy:id,first_name,last_name')->where(
-                        'initiated_by',
-                        Auth::id()
-                    )->whereIn(
-                        'status',
-                        [
-                            'queued',
-                            'validating',
-                            'processing',
-                        ]
-                    )->latest()->first(),
-
-                'selectedBatch' => function () use ($resolveSelectedBatch) {
-                    $batch = $resolveSelectedBatch();
-
-                    if (!$batch) return null;
-
-                    $batch->loadMissing('initiatedBy:id,first_name,last_name');
-
-                    return $batch;
-                },
-
-                'changes' => function () use ($request, $resolveSelectedBatch) {
-                    $batch = $resolveSelectedBatch();
-
-                    if (!$batch) return null;
-
-                    $changesPage = max(1, $request->integer('changes_page', 1));
-
-                    $loadChanges = function () use ($batch) {
-                        return $batch->rows()->orderBy('row_number')
-                            ->paginate(
-                                50,
-                                [
-                                    'id',
-                                    'batch_id',
-                                    'row_number',
-                                    'identifier',
-                                    'action',
-                                    'errors',
-                                    'before_data',
-                                    'after_data',
-                                ],
-                                'changes_page'
-                            )->withQueryString();
-                    };
-
-                    if (in_array($batch->status, [
-                                'completed',
-                                'failed',
-                                'validation_failed',
-                            ],
-                            true
-                        )
-                    ) {
-                        return Cache::remember(
-                            "data-import:changes:{$batch->id}:{$changesPage}",
-                            now()->addMinutes(5),
-                            $loadChanges
-                        );
-                    }
-
-                    return $loadChanges();
-                },
+                'batches' => $batches,
+                'activeBatch' => $activeBatch,
+                'selectedBatch' => $selectedBatch,
+                'changes' => $changes,
             ]
         );
     }

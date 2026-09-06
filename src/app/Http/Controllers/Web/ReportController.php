@@ -15,7 +15,6 @@ use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -27,16 +26,7 @@ class ReportController extends Controller
         $selectedStatus = $req->query('status', 'all');
         $selectedCategory = $req->query('category', 'all');
 
-        $categories = Cache::remember(
-            'reports:active_categories',
-            now()->addMinutes(5),
-            fn () => IncidentCategory::where(
-                'is_active',
-                true
-            )
-                ->orderBy('category_name')
-                ->get()
-        );
+        $categories = IncidentCategory::where('is_active', true)->orderBy('category_name')->get();
 
         $authUser = Auth::user();
         $authStaff = $authUser?->staff;
@@ -110,50 +100,42 @@ class ReportController extends Controller
             'Dismissed' => 6,
         ];
 
-        $reports = $reportsQuery->leftJoin(
-                'report_statuses as sorting_status',
-                'reports.current_status_id',
-                '=',
-                'sorting_status.id'
-            )->select('reports.*')->orderByRaw(
-                "CASE sorting_status.status_name
-                    WHEN 'Pending' THEN {$statusOrder['Pending']}
-                    WHEN 'Under Investigation' THEN {$statusOrder['Under Investigation']}
-                    WHEN 'Scheduled' THEN {$statusOrder['Scheduled']}
-                    WHEN 'Escalated' THEN {$statusOrder['Escalated']}
-                    WHEN 'Resolved' THEN {$statusOrder['Resolved']}
-                    WHEN 'Dismissed' THEN {$statusOrder['Dismissed']}
-                    ELSE 99
-                END ASC"
-            )->orderByDesc('reports.created_at')->paginate(10)->withQueryString();
+        $allReports = $reportsQuery->get()->sort(function ($a, $b) use ($statusOrder) {
+            $statusA = $a->current_status?->status_name ?? '';
+            $statusB = $b->current_status?->status_name ?? '';
 
-        $reports->getCollection()->transform(
-            function ($report) use ($authUser) {
-                $assignment = $report->latest_assignment;
+            $rankA = $statusOrder[$statusA] ?? 99;
+            $rankB = $statusOrder[$statusB] ?? 99;
 
-                $report->current_level = $assignment ? (int) $assignment->level : null;
-                $report->current_assignee = $assignment?->staff_assigned_to;
-                $report->can_act = $this->canActOnReport($authUser, $report);
-                $report->read_only = !$report->can_act;
-
-                return $report;
+            if ($rankA !== $rankB) {
+                return $rankA <=> $rankB;
             }
-        );
 
-        $statuses = [
-            'all',
-            'Pending',
-            'Under Investigation',
-            'Scheduled',
-            'Escalated',
-            'Resolved',
-            'Dismissed',
-        ];
+            return $b->created_at->timestamp <=> $a->created_at->timestamp;
+        })->values();
 
-        return Inertia::render(
-            'Reports/Index',
-            compact('reports', 'categories', 'statuses', 'selectedStatus', 'selectedCategory')
-        );
+        $perPage = 10;
+        $currentPage = LengthAwarePaginator::resolveCurrentPage();
+
+        $currentItems = $allReports->slice(($currentPage - 1) * $perPage, $perPage)->values()->map(function ($report) use ($authUser) {
+            $assignment = $report->latest_assignment;
+
+            $report->current_level = $assignment ? (int) $assignment->level : null;
+            $report->current_assignee = $assignment?->staff_assigned_to;
+            $report->can_act = $this->canActOnReport($authUser, $report);
+            $report->read_only = !$report->can_act;
+
+            return $report;
+        });
+
+        $reports = new LengthAwarePaginator($currentItems, $allReports->count(), $perPage, $currentPage, [
+            'path' => $req->url(),
+            'query' => $req->query(),
+        ]);
+
+        $statuses = ['all', 'Pending', 'Under Investigation', 'Scheduled', 'Escalated', 'Resolved', 'Dismissed'];
+
+        return Inertia::render('Reports/Index', compact('reports', 'categories', 'statuses', 'selectedStatus', 'selectedCategory'));
     }
 
     public function create()
@@ -182,7 +164,7 @@ class ReportController extends Controller
 
     public function show(string $id)
     {
-        $report = Report::with(['current_status', 'latest_assignment'])->findOrFail($id);
+        $report = Report::with(['current_status', 'latest_assignment.staff_assigned_to.user'])->findOrFail($id);
 
         $this->ensureInitialAssignment($report);
 
@@ -214,12 +196,7 @@ class ReportController extends Controller
         $report->can_act = $this->canActOnReport(Auth::user(), $report);
         $report->read_only = !$report->can_act;
 
-        $statuses = Cache::remember('reports:action_statuses',
-            now()->addMinutes(5),
-            fn () => ReportStatus::whereIn(
-                'status_name', ['Scheduled', 'Escalated', 'Resolved', 'Dismissed']
-            )->get()
-        );
+        $statuses = ReportStatus::whereIn('status_name', ['Scheduled', 'Escalated', 'Resolved', 'Dismissed'])->get();
 
         return Inertia::render('Reports/Report', compact('report', 'statuses'));
     }
@@ -503,13 +480,11 @@ class ReportController extends Controller
 
     private function staffLevel(?Staff $staff): ?int
     {
-        if (!$staff) return null;
+        if (!$staff) {
+            return null;
+        }
 
-        $staff->loadMissing('positions');
-
-        $position = $staff->positions->sortByDesc('pivot.assigned_at')->first();
-
-        return match ($position?->position_name) {
+        return match ($staff->latestPosition->position_name) {
             'Teacher' => 1,
             'Principal' => 2,
             'Ministrong Tagasubaybay' => 3,
@@ -543,11 +518,7 @@ class ReportController extends Controller
 
     private function ensureInitialAssignment(Report $report): void
     {
-        $hasAssignment = $report->relationLoaded('latest_assignment')
-            ? $report->latest_assignment !== null
-            : $report->latest_assignment()->exists();
-
-        if ($hasAssignment || $report->current_status?->status_name !== 'Pending') {
+        if ($report->latest_assignment()->exists() || $report->current_status?->status_name !== 'Pending') {
             return;
         }
 
@@ -556,16 +527,12 @@ class ReportController extends Controller
         $students = $report->students;
 
         $orderedStudents = $students->sortByDesc(function ($student) {
-            return in_array(
-                strtolower((string) $student->pivot->involvement_type),
-                ['victim', 'target'],
-                true
-            ) ? 1 : 0;
+            return in_array(strtolower((string) $student->pivot->involvement_type), ['victim', 'target'], true) ? 1 : 0;
         });
 
         foreach ($orderedStudents as $student) {
             foreach ($student->grade_sections as $gradeSection) {
-                if ($gradeSection->pivot?->ended_at !== null ||!$gradeSection->adviser) {
+                if ($gradeSection->pivot?->ended_at !== null || !$gradeSection->adviser) {
                     continue;
                 }
 
