@@ -463,6 +463,9 @@ class ProcessRosterImport implements ShouldQueue
                 'status' => 'Inactive',
             ]); */
 
+            $defaultPassword = Str::lower($row['first_name'][0])
+                . str_replace(' ', '', $row['last_name']) . $row['staff_number'];
+
             $user = new User();
             $user->first_name = $row['first_name'];
             $user->last_name = $row['last_name'];
@@ -471,7 +474,7 @@ class ProcessRosterImport implements ShouldQueue
             $user->gender = $row['gender'] ?? 'Others';
             $user->birthdate = $row['birthdate'];
             $user->email = $row['email'];
-            $user->password = Hash::make(Str::random(48));
+            $user->password = Hash::make($defaultPassword);
             $user->phone_number = $row['phone_number'] ?? null;
             $user->status = $row['employment_status'];
             $user->save();

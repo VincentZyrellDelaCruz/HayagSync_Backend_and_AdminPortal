@@ -1832,7 +1832,7 @@ export default function Report({ report }: ReportShowProps) {
                                         e.target.value,
                                     )
                                 }
-                                className="h-11 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                className="h-11 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none text-black focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                             />
 
                             {scheduleForm.errors.meeting_datetime && (
@@ -1864,7 +1864,7 @@ export default function Report({ report }: ReportShowProps) {
                                         e.target.value,
                                     )
                                 }
-                                className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-black outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                             >
                                 <option value="In-Person">
                                     In-Person
@@ -1900,7 +1900,7 @@ export default function Report({ report }: ReportShowProps) {
                                 )
                             }
                             placeholder="e.g. Parent conference, student interview, case review..."
-                            className="w-full resize-y rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                            className="w-full resize-y rounded-xl border border-slate-300 px-3 py-2.5 text-sm text-black outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                         />
 
                         {scheduleForm.errors.purpose && (

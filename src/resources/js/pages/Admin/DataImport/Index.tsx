@@ -484,7 +484,7 @@ export default function DataImportIndex({ batches, activeBatch, selectedBatch, c
                                                 </td>
 
                                                 <td className="px-5 py-4 text-sm text-slate-600">
-                                                    {batch.initiatedBy ? `${batch.initiatedBy.last_name}, ${batch.initiatedBy.first_name}` : 'Unknown'}
+                                                    {batch.initiated_by ? `${batch.initiated_by.last_name}, ${batch.initiated_by.first_name}` : 'Unknown'}
                                                 </td>
 
                                                 <td className="px-5 py-4 text-right">
@@ -533,7 +533,7 @@ export default function DataImportIndex({ batches, activeBatch, selectedBatch, c
 
                                         <div className="mt-3 flex items-center justify-between gap-3">
                                             <p className="truncate text-xs text-slate-400">
-                                                {batch.initiatedBy ? `${batch.initiatedBy.last_name}, ${batch.initiatedBy.first_name}` : 'Unknown'}
+                                                {batch.initiated_by ? `${batch.initiated_by.last_name}, ${batch.initiated_by.first_name}` : 'Unknown'}
                                             </p>
 
                                             <Link

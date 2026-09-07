@@ -3,27 +3,30 @@
 namespace App\Console\Commands;
 
 use App\Jobs\GenerateAiAnalysis;
-use Illuminate\Console\Attributes\Description;
-use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 
-#[Signature('app:generate-ai-analysis-command')]
-#[Description('Command description')]
 class GenerateAiAnalysisCommand extends Command
 {
-    protected $signature = 'ai:generate {periodicity} {periodLabel}';
+    protected $signature = 'ai:generate {periodicity} {periodLabel} {periodStart?} {periodEnd?}';
     protected $description = 'Dispatch AI analysis job for a given period';
 
     public function handle()
     {
         $periodicity = $this->argument('periodicity');
         $periodLabel = $this->argument('periodLabel');
+        $periodStart = $this->argument('periodStart');
+        $periodEnd = $this->argument('periodEnd');
 
-        // Build analytics summary (you can refactor this into a service)
-        // $summary = "Weekly: ... Monthly: ... Academic Year: ...";
+        if (!in_array($periodicity, ['weekly', 'monthly', 'yearly'], true)) {
+            $this->error('Invalid periodicity. Use weekly, monthly, or yearly.');
 
-        GenerateAiAnalysis::dispatch($periodicity, $periodLabel);
+            return self::FAILURE;
+        }
+
+        GenerateAiAnalysis::dispatch($periodicity, $periodLabel, $periodStart, $periodEnd);
 
         $this->info("AI analysis job dispatched for {$periodicity} ({$periodLabel}).");
+
+        return self::SUCCESS;
     }
 }

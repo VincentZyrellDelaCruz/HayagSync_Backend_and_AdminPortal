@@ -161,8 +161,7 @@ class DataImportController extends Controller
 
         return response()->json([
             'id' => $batch->id,
-            'initiated_by' => $batch->initiated_by,
-            'initiatedBy' => $batch->initiatedBy,
+            'initiated_by' => $batch->initiatedBy,
             'file_name' => $batch->file_name,
             'import_type' => $batch->import_type,
             'mode' => $batch->mode,

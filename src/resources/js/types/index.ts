@@ -232,7 +232,8 @@ export interface AiAnalysis {
     id: string;
     periodicity: string;
     period_label: string;
-    output_html: string;
+    output?: string | null;
+    output_html?: string | null;
     created_at: string;
     updated_at?: string;
 }
@@ -279,7 +280,7 @@ export interface DashboardProps {
 
 export interface ImportBatch {
     id: string;
-    initiated_by: string;
+    initiated_by: InitiatedBy;
     import_type: 'students' | 'staff';
     mode: 'reference_only' | 'full_roster';
     status: string;

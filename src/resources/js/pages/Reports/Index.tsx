@@ -641,18 +641,9 @@ export default function ReportsIndex({
                                                                     {(currentLevel ||
                                                                         assignee) && (
                                                                         <div className="mt-3 flex flex-wrap gap-2">
-                                                                            {currentLevel && (
-                                                                                <span className="rounded-lg bg-slate-100 px-2.5 py-1.5 text-[11px] font-medium text-slate-600">
-                                                                                    Level{' '}
-                                                                                    {
-                                                                                        currentLevel
-                                                                                    }
-                                                                                </span>
-                                                                            )}
-
                                                                             {assignee && (
                                                                                 <span className="rounded-lg bg-slate-100 px-2.5 py-1.5 text-[11px] font-medium text-slate-600">
-                                                                                    Assigned:{' '}
+                                                                                    Last Assigned:{' '}
                                                                                     {
                                                                                         assignee
                                                                                     }

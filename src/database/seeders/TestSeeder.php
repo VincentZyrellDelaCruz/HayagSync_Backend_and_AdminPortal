@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\UserLoginHistory;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class TestSeeder extends Seeder
 {
@@ -42,5 +43,10 @@ class TestSeeder extends Seeder
             ['position_name' => 'Teacher', 'department' => 'Junior High School'],
             ['position_name' => 'Teacher', 'department' => 'Junior High School']
         ); */
+
+        /* User::find('')->update([
+            'email' => '',
+            'password' => Hash::make('11111111'),
+        ]); */
     }
 }

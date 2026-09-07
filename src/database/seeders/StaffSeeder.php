@@ -12,9 +12,18 @@ class StaffSeeder extends Seeder
 {
     public function run(): void
     {
-        $positions = ['Teacher', 'Principal', 'Ministrong Tagasubaybay', 'OSD Officer'];
-        foreach ($positions as $position) {
-            Position::firstOrCreate(['position_name' => $position]);
+        $positions = [
+            'Teacher' => 'Integrated School',
+            'Principal' => 'Administration',
+            'Ministrong Tagasubaybay' => 'Office of Student Discipline',
+            'OSD Officer' => 'Office of Student Discipline',
+        ];
+
+        foreach ($positions as $position => $department) {
+            Position::firstOrCreate([
+                'position_name' => $position,
+                'department' => $department,
+            ]);
         }
 
         $staffUsers = User::orderBy('last_name', 'asc')->limit(12)->get();

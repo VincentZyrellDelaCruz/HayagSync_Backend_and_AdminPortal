@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Models\AiAnalysis;
 use App\Models\Report;
+use App\Models\SchoolYear;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -158,21 +159,30 @@ class DashboardController extends Controller
             })
             ->values();
 
-        $latestAnalysis = AiAnalysis::orderByDesc('created_at')->first();
+        $latestPosition = $request->user()?->staff->positions()
+            ->orderByDesc('staff_position.assigned_at')
+            ->first();
+
+        $schoolYear = SchoolYear::where('is_active', true)->latest()->first();
+
+        $latestAnalysis = $latestPosition
+            ? AiAnalysis::where('position_id', $latestPosition->id)
+                ->where('school_year_id', optional($schoolYear)->id)
+                ->orderByDesc('created_at')
+                ->first()
+            : null;
 
         $analysisFilter = $request->query('filter', 'all');
 
-        $analyses = AiAnalysis::query()
-            ->when(
-                in_array(
-                    $analysisFilter,
-                    ['weekly', 'monthly', 'yearly']
-                ),
-                fn($query) =>
-                    $query->where(
-                        'periodicity',
-                        $analysisFilter
-                    )
+        $analyses = AiAnalysis::query()->when($latestPosition, fn($query) => $query->where(
+                    'position_id',
+                    $latestPosition->id
+                )
+            )
+            ->when(!$latestPosition, fn($query) => $query->whereRaw('0 = 1'))
+            ->where('school_year_id', optional($schoolYear)->id)
+            ->when(in_array($analysisFilter, ['weekly', 'monthly', 'yearly']),
+                fn($query) => $query->where('periodicity', $analysisFilter)
             )
             ->orderByDesc('created_at')
             ->paginate(10)
