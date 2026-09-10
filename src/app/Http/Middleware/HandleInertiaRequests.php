@@ -43,8 +43,9 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'quote' => ['message' => trim($message), 'author' => trim($author)],
             'auth' => [
-                'user' => $request->user(),
+                'user' => $request->user()?->loadMissing(['staff', 'parent_guardian']),
                 'is_admin' => (bool) $request->user()?->staff?->is_admin,
+                'is_parent' => (bool) $request->user()?->parent_guardian,
             ],
             'flash' => [
                 'error' => fn() => $request->session()->get('error'),

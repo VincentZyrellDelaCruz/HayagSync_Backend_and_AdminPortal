@@ -123,4 +123,6 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    'dev_otp_bypass_email' => env('DEV_OTP_BYPASS_EMAIL'),
+
 ];

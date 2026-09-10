@@ -33,6 +33,16 @@ class CheckNewDeviceLogin
             return;
         }
 
+        // TEMPORARY OTP BYPASS (LOCAL DEV ONLY!)
+        if (
+            app()->environment('local') &&
+            $user->parent_guardian &&
+            filled(config('app.dev_otp_bypass_email')) &&
+            strcasecmp($user->email, config('app.dev_otp_bypass_email')) === 0
+        ) {
+            return;
+        }
+
         $agent = new Agent();
 
         $deviceName = $agent->device() ?? 'Unknown';

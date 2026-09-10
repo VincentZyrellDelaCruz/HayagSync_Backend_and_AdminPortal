@@ -2,15 +2,11 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { InfoField } from '@/components/ui/info-field';
 import { SectionCard } from '@/components/ui/section-card';
 import AppLayout from '@/layouts/app-layout';
-import { Student, User, type BreadcrumbItem } from '@/types';
+import { Student, StudentInfoProps, User, type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
 import { ChevronRight, ClipboardList, Database, FileText, ShieldAlert, Users } from 'lucide-react';
 
 declare function route(name: string, params?: Record<string, unknown> | number | string): string;
-
-interface StudentInfoProps {
-    student: Student;
-}
 
 const formatDate = (value: string | null) => {
     if (!value) return 'N/A';

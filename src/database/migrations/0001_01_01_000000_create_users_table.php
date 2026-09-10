@@ -29,24 +29,10 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            $table->index('status');  
-            $table->index('created_at');  
-            $table->index(['last_name', 'first_name']);  
-            $table->index('deleted_at');  
-
-
-            // Custom Roles and student links
-           /*  $table->enum('role', ['parent', 'adviser', 'principal', 'ministrong_tagasubaybay', 'osd'])->default('parent');
-            $table->string('avatar_url')->nullable(); */
-
-            // For advisers
-            // $table->string('assigned_section')->nullable();
-
-            // For verified parents
-            /* $table->string('student_name')->nullable();
-            $table->string('student_grade')->nullable();
-            $table->string('student_section')->nullable();
-            $table->string('academic_year')->nullable(); */
+            $table->index('status');
+            $table->index('created_at');
+            $table->index(['last_name', 'first_name']);
+            $table->index('deleted_at');
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

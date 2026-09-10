@@ -32,7 +32,7 @@ Route::prefix('/otp')->name('otp.')->controller(OtpController::class)->group(fun
     Route::post('/verify', 'verify')->name('verify.submit');
 });
 
-Route::middleware(['auth', 'staff_only'])->group(function () {
+Route::middleware(['auth', 'portal_only'])->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['verified'])->name('dashboard');
 
@@ -41,52 +41,54 @@ Route::middleware(['auth', 'staff_only'])->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('settings.profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('settings.profile.destroy');
 
-    // MEETINGS
-    Route::put('/meetings/{meeting}/{action}', [MeetingController::class, 'update'])->name('web.meetings.update');
-    Route::post('/meetings/{meeting}/chat', [ChatController::class, 'store'])->name('web.chat_messages.store');
-
-    // BULLYING INCIDENT REPORT MANAGEMENT
-    Route::prefix('/reports')->name('web.reports.')->controller(ReportController::class)->group(function () {
-        Route::get('/', 'index')->name('index');
-        Route::get('/{id}', 'show')->name('show');
-        Route::get('/reports/evidence/{reportEvidence}/stream', 'streamEvidence')->name('evidence.stream');
-        Route::post('/{report}/forward', 'forward')->name('forward');
-        Route::post('/{report}/resolve', 'resolve')->name('resolve');
-        Route::post('/{report}/dismiss', 'dismiss')->name('dismiss');
-        Route::put('/{id}', 'update')->name('update');
-    });
-
-    // STUDENT DIRECTORY
+    // STUDENT DIRECTORY / RELATED STUDENTS
     Route::get('/students', [StudentController::class, 'index'])->name('web.students.index');
     Route::get('/students/{student}', [StudentController::class, 'show'])->name('web.students.show');
 
-    // USER DIRECTORY (PARENT/GUARDIAN AND STAFF)
-    Route::get('/users', [UserController::class, 'index'])->name('web.users.index');
-    Route::get('/users/{user}', [UserController::class, 'show'])->name('web.users.show');
-
-    // ADMIN-ONLY ROUTES
-    Route::middleware('admin_only')->prefix('/admin')->name('web.admin.')->group(function () {
-        // SECURITY CENTER
-        Route::get('/security', [SecurityCenterController::class, 'index'])->name('security.index');
-        Route::patch('/security/events/{securityEvent}/resolve', [SecurityCenterController::class, 'resolve'])
-            ->name('security.events.resolve');
-
-        // DATA IMPORT CENTER (ETL PROCESSING)
-        Route::prefix('/imports')->name('imports.')->controller(DataImportController::class)->group(function() {
-            Route::get('/', 'index')->name('index');
-            Route::post('/', 'store')->name('store');
-            Route::get('/{batch}/status', 'status')->name('status');
-        });
-    });
-
-    // NOTIFICATION/INBOX HUB
-    Route::prefix('/notifications')->name('notifications.')->controller(NotificationController::class)
-        ->group(function() {
+    // NOTIFICATION / INBOX HUB
+    Route::prefix('/notifications')->name('notifications.')->controller(NotificationController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::patch('/{inbox}/read', 'markRead')->name('read');
         Route::patch('/read-all', 'markAllRead')->name('read-all');
     });
 
+    // STAFF-ONLY FEATURES
+    Route::middleware('staff_only')->group(function () {
+
+        // MEETINGS
+        Route::put('/meetings/{meeting}/{action}', [MeetingController::class, 'update'])->name('web.meetings.update');
+        Route::post('/meetings/{meeting}/chat', [ChatController::class, 'store'])->name('web.chat_messages.store');
+
+        // BULLYING INCIDENT REPORT MANAGEMENT
+        Route::prefix('/reports')->name('web.reports.')->controller(ReportController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/{id}', 'show')->name('show');
+            Route::get('/reports/evidence/{reportEvidence}/stream', 'streamEvidence')->name('evidence.stream');
+            Route::post('/{report}/forward', 'forward')->name('forward');
+            Route::post('/{report}/resolve', 'resolve')->name('resolve');
+            Route::post('/{report}/dismiss', 'dismiss')->name('dismiss');
+            Route::put('/{id}', 'update')->name('update');
+        });
+
+        // USER DIRECTORY
+        Route::get('/users', [UserController::class, 'index'])->name('web.users.index');
+        Route::get('/users/{user}', [UserController::class, 'show'])->name('web.users.show');
+
+        // ADMIN-ONLY ROUTES
+        Route::middleware('admin_only')->prefix('/admin')->name('web.admin.')->group(function () {
+
+            Route::get('/security', [SecurityCenterController::class, 'index'])->name('security.index');
+
+            Route::patch('/security/events/{securityEvent}/resolve', [SecurityCenterController::class, 'resolve'])
+                ->name('security.events.resolve');
+
+            Route::prefix('/imports')->name('imports.')->controller(DataImportController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::get('/{batch}/status', 'status')->name('status');
+            });
+        });
+    });
 });
 
 

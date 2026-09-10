@@ -17,6 +17,7 @@ interface StudentsIndexProps {
     search: string;
     grade: string;
     section: string;
+    isParent: boolean;
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -28,14 +29,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 const ALUMNI_VALUE = 'Alumni';
 
-export default function StudentsIndex({
-    students,
-    sections,
-    grades,
-    search,
-    grade,
-    section,
-}: StudentsIndexProps) {
+export default function StudentsIndex({ students, sections, grades, search, grade, section, isParent }: StudentsIndexProps) {
     const [searchValue, setSearchValue] = useState(search ?? '');
     const [gradeValue, setGradeValue] = useState(grade ?? '');
     const [sectionValue, setSectionValue] = useState(section ?? '');
@@ -146,7 +140,7 @@ export default function StudentsIndex({
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Students" />
+            <Head title={isParent ? "Related Students" : "Students"} />
 
             <div className="min-h-full bg-slate-50/60">
                 <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
@@ -160,11 +154,15 @@ export default function StudentsIndex({
 
                             <div className="min-w-0">
                                 <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
-                                    Students List
+                                    {isParent ? 'Related Students' : 'Students List'}
                                 </h1>
 
                                 <p className="text-sm text-slate-500">
-                                    Search student records from NEU Integrated School
+                                    {
+                                        isParent
+                                            ? 'Students linked to you'
+                                            : 'Search student records from NEU Integrated School'
+                                    }
                                 </p>
                             </div>
                         </div>
@@ -204,7 +202,7 @@ export default function StudentsIndex({
                                     onChange={(e) =>
                                         setSearchValue(e.target.value)
                                     }
-                                    placeholder="Search by name or student number"
+                                    placeholder={isParent ? "Search related students by name or student number" : "Search by name or student number"}
                                     className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-10 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                                 />
 
@@ -319,18 +317,16 @@ export default function StudentsIndex({
                         <div className="flex flex-col gap-2 border-b border-slate-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
                             <div>
                                 <h2 className="text-sm font-semibold text-slate-800">
-                                    {gradeValue ===
-                                        ALUMNI_VALUE
-                                        ? 'Alumni Students'
-                                        : 'Student List'}
+                                    {isParent
+                                        ? 'Related Students'
+                                        : gradeValue === ALUMNI_VALUE
+                                            ? 'Alumni Students'
+                                            : 'Student List'
+                                    }
                                 </h2>
 
                                 <p className="text-xs text-slate-500">
-                                    {students.total}{' '}
-                                    {students.total === 1
-                                        ? 'student'
-                                        : 'students'}{' '}
-                                    found
+                                    {students.total} {students.total === 1 ? 'student' : 'students'} found
                                 </p>
                             </div>
 

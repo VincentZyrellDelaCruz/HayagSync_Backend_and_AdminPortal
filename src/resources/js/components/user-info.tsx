@@ -16,7 +16,12 @@ export function UserInfo({ user, showEmail = false }: { user: User; showEmail?: 
             <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{user.name}</span>
                 <span className="text-muted-foreground truncate text-xs">
-                    {user?.staff?.latest_position?.position_name ?? 'N/A'} {user?.staff?.is_admin ? '(Admin)' : ''}
+                    {user?.parent_guardian
+                        ? 'Parent / Guardian'
+                        : (<>
+                            {user?.staff?.latest_position?.position_name ?? 'N/A'} {user?.staff?.is_admin ? '(Admin)' : ''}
+                        </>)
+                    }
                 </span>
                 {showEmail && <span className="text-muted-foreground truncate text-xs">{user.email}</span>}
             </div>

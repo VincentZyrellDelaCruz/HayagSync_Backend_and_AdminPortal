@@ -130,6 +130,10 @@ export interface Student {
     updated_at: string;
 }
 
+export interface StudentInfoProps {
+    student: Student;
+}
+
 export interface GradeSection {
     id: number;
     school_year: SchoolYear;
