@@ -25,9 +25,7 @@ class StudentPolicy
             return true;
         }
 
-        $parent = $user->parent_guardian;
-
-        return $parent?->students()->whereKey($student->getKey())->exists() ?? false;
+        return $user->parent_guardian->students()->whereKey($student->getKey())->exists();
     }
 
     /**

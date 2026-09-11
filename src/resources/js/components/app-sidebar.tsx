@@ -19,12 +19,17 @@ export function AppSidebar() {
                 icon: LayoutGrid,
             },
             {
+                title: 'Incident Reports',
+                url: route('web.reports.index'),
+                icon: Megaphone,
+            },
+            {
                 title: 'Related Students',
                 url: route('web.students.index'),
                 icon: GraduationCap,
             },
         ]
-        :[
+        : [
             {
                 title: 'Dashboard',
                 url: '/dashboard',

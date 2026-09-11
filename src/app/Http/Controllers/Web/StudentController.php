@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Models\GradeSection;
 use App\Models\Student;
+use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
@@ -66,7 +68,8 @@ class StudentController extends Controller
         if (strtolower($grade) === 'alumni') {
             $query->whereHas('latestEnrollment', fn ($q) => $q->whereNotNull('ended_at'));
             $section = '';
-        } else {
+        }
+        else {
             $query->whereHas('latestEnrollment', function ($q) use ($grade, $section) {
                 $q->whereNull('ended_at');
 
@@ -111,7 +114,7 @@ class StudentController extends Controller
         ]);
     }
 
-    private function parentIndex(Request $request, $user)
+    private function parentIndex(Request $request, User $user)
     {
         $parent = $user->parent_guardian;
 
@@ -152,17 +155,15 @@ class StudentController extends Controller
 
         $grades = $catalogStudents
             ->map(fn ($student) => $student->latestEnrollment?->grade_section?->grade_level)
-            ->filter()
-            ->unique()
-            ->sort()
-            ->values();
+            ->filter()->unique()->sort()->values();
 
         $query = $parent->students()->with(['latestEnrollment.grade_section']);
 
         if (strtolower($grade) === 'alumni') {
             $query->whereHas('latestEnrollment', fn ($q) => $q->whereNotNull('ended_at'));
             $section = '';
-        } else {
+        }
+        else {
             $query->whereHas('latestEnrollment', function ($q) use ($grade, $section) {
                 $q->whereNull('ended_at');
 
@@ -186,11 +187,7 @@ class StudentController extends Controller
             });
         }
 
-        $students = $query
-            ->orderBy('last_name')
-            ->orderBy('first_name')
-            ->paginate(10)
-            ->withQueryString();
+        $students = $query->orderBy('last_name')->orderBy('first_name')->paginate(10)->withQueryString();
 
         $students->getCollection()->transform(function ($student) {
             $student->latest_section = $student->latestEnrollment?->grade_section;

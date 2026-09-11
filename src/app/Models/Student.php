@@ -59,6 +59,24 @@ class Student extends Model
             ->first();
     }
 
+    public function activeEnrollment(): HasOne
+    {
+        return $this->hasOne(Enrollment::class, 'student_id')->ofMany(
+            [
+                'enrolled_at' => 'max',
+                'id' => 'max',
+            ],
+            function ($query) {
+                $query->where('status', 'Enrolled')->whereNull('ended_at');
+            }
+        );
+    }
+
+    public function isCurrentlyEnrolled(): bool
+    {
+        return $this->activeEnrollment()->exists();
+    }
+
     public function isAlumni(): bool
     {
         return $this->latestEnrollment?->ended_at !== null;

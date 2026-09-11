@@ -2,6 +2,8 @@ import { LucideIcon } from 'lucide-react';
 
 export interface Auth {
     user: User;
+    is_parent?: boolean;
+    is_admin?: boolean;
 }
 
 export interface BreadcrumbItem {
@@ -232,6 +234,31 @@ export interface StudentReport {
     pivot: ReportPivot;
 }
 
+export interface ReportFormStudent {
+    id: string;
+    student_number: string;
+    first_name: string;
+    last_name: string;
+    middle_name?: string | null;
+    suffix?: string | null;
+    grade_level?: string | null;
+    section?: string | null;
+}
+
+export interface ReportSearchStudent {
+    id: string;
+    student_number: string;
+    first_name: string;
+    last_name: string;
+    grade_level?: string | null;
+    section?: string | null;
+}
+
+export interface ReportEvidenceInput {
+    file: File;
+    caption: string;
+}
+
 export interface AiAnalysis {
     id: string;
     periodicity: string;
@@ -280,6 +307,15 @@ export interface DashboardProps {
     latestAnalysis: AiAnalysis | null;
     analyses: Paginated<AiAnalysis>;
     analysisFilter: string;
+}
+
+export interface ParentDashboardMetrics {
+    related_students: number;
+    submitted_reports: number;
+    ongoing_cases: number;
+    resolved_cases: number;
+    resolution_rate: number;
+    academic_year_label: string;
 }
 
 export interface ImportBatch {

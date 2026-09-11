@@ -19,10 +19,11 @@ class Report extends Model
     protected $casts = [
         'incident_date' => 'date',
         'incident_time' => 'datetime',
+        'urgent_safety_flag' => 'boolean',
+        'urgency_assessed_at' => 'datetime',
     ];
 
     protected $fillable = [
-        /* 'school_id', */
         'report_code',
         'reported_by',
         'category_id',
@@ -33,6 +34,8 @@ class Report extends Model
         'incident_date',
         'incident_time',
         'ai_summary',
+        'urgent_safety_flag',
+        'urgency_assessed_at',
     ];
 
     public function user(): BelongsTo

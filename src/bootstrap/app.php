@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\AdminOnly;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\ParentOnlyMiddleware;
 use App\Http\Middleware\PortalOnlyMiddleware;
 use App\Http\Middleware\StaffOnlyMIddleware;
 use Illuminate\Foundation\Application;
@@ -25,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'portal_only' => PortalOnlyMiddleware::class,
+            'parent_only' => ParentOnlyMiddleware::class,
             'staff_only' => StaffOnlyMIddleware::class,
             'admin_only' => AdminOnly::class,
         ]);

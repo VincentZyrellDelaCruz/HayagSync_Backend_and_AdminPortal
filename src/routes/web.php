@@ -36,6 +36,27 @@ Route::middleware(['auth', 'portal_only'])->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['verified'])->name('dashboard');
 
+    // BULLYING INCIDENT REPORT MANAGEMENT
+    Route::prefix('/reports')->name('web.reports.')->controller(ReportController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+
+        Route::middleware('parent_only')->group(function () {
+            Route::get('/create', 'create')->name('create');
+            Route::post('/', 'store')->name('store');
+            Route::get('/student-search', 'studentSearch')->name('student-search');
+        });
+
+        Route::get('/evidence/{reportEvidence}/stream', 'streamEvidence')->name('evidence.stream');
+        Route::get('/{id}', 'show')->name('show');
+
+        Route::middleware('staff_only')->group(function () {
+            Route::post('/{report}/forward', 'forward')->name('forward');
+            Route::post('/{report}/resolve', 'resolve')->name('resolve');
+            Route::post('/{report}/dismiss', 'dismiss')->name('dismiss');
+            Route::put('/{id}', 'update')->name('update');
+        });
+    });
+
     // PROFILE CENTER
     Route::get('/profile', [ProfileController::class, 'edit'])->name('settings.profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('settings.profile.update');
@@ -58,17 +79,6 @@ Route::middleware(['auth', 'portal_only'])->group(function () {
         // MEETINGS
         Route::put('/meetings/{meeting}/{action}', [MeetingController::class, 'update'])->name('web.meetings.update');
         Route::post('/meetings/{meeting}/chat', [ChatController::class, 'store'])->name('web.chat_messages.store');
-
-        // BULLYING INCIDENT REPORT MANAGEMENT
-        Route::prefix('/reports')->name('web.reports.')->controller(ReportController::class)->group(function () {
-            Route::get('/', 'index')->name('index');
-            Route::get('/{id}', 'show')->name('show');
-            Route::get('/reports/evidence/{reportEvidence}/stream', 'streamEvidence')->name('evidence.stream');
-            Route::post('/{report}/forward', 'forward')->name('forward');
-            Route::post('/{report}/resolve', 'resolve')->name('resolve');
-            Route::post('/{report}/dismiss', 'dismiss')->name('dismiss');
-            Route::put('/{id}', 'update')->name('update');
-        });
 
         // USER DIRECTORY
         Route::get('/users', [UserController::class, 'index'])->name('web.users.index');
