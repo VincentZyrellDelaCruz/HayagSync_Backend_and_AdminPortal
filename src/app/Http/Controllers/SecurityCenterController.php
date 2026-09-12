@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\SecurityEvent;
 use App\Models\UserLoginHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
@@ -21,6 +23,16 @@ class SecurityCenterController extends Controller
 
         // ACTIVITY LOGS (USER ACTIVITIES LIKE SUBMIT REPORT, AND CHANGE UPDATES)
         $activityLogs = ActivityLog::query()
+            ->select([
+                'id',
+                'user_id',
+                'action_type',
+                'description',
+                'module',
+                'record_id',
+                'ip_address',
+                'created_at',
+            ])
             ->with('user:id,first_name,last_name,email')
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($q) use ($search) {
@@ -37,13 +49,22 @@ class SecurityCenterController extends Controller
                         });
                 });
             })
-            ->latest()
+            ->latest('created_at')
             ->paginate(12, ['*'], 'activity_page')
             ->withQueryString();
 
-
         // LOGIN HISTORY (TRACKS LOGIN METADATA)
         $loginHistory = UserLoginHistory::query()
+            ->select([
+                'id',
+                'user_id',
+                'device_name',
+                'browser',
+                'ip_address',
+                'location',
+                'login_time',
+                'created_at',
+            ])
             ->with('user:id,first_name,last_name,email')
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($q) use ($search) {
@@ -65,6 +86,19 @@ class SecurityCenterController extends Controller
 
         // SECURITY EVENTS
         $securityEvents = SecurityEvent::query()
+            ->select([
+                'id',
+                'user_id',
+                'severity',
+                'event_type',
+                'description',
+                'ip_address',
+                'location',
+                'status',
+                'resolved_at',
+                'resolved_by',
+                'created_at',
+            ])
             ->with([
                 'user:id,first_name,last_name,email',
                 'admin.user:id,first_name,last_name,email',
@@ -83,12 +117,8 @@ class SecurityCenterController extends Controller
                         });
                 });
             })
-            ->when($severity, function ($query) use ($severity) {
-                $query->where('severity', $severity);
-            })
-            ->when($status, function ($query) use ($status) {
-                $query->where('status', $status);
-            })
+            ->when($severity, fn ($query) => $query->where('severity', $severity))
+            ->when($status, fn ($query) => $query->where('status', $status))
             ->orderByRaw("
                 CASE severity
                     WHEN 'critical' THEN 1
@@ -98,64 +128,39 @@ class SecurityCenterController extends Controller
                     ELSE 5
                 END
             ")
-            ->latest()
+            ->latest('created_at')
             ->paginate(12, ['*'], 'security_page')
             ->withQueryString();
 
         // SUMMARY COUNTS
-        $summary = [
-            'activity' => ActivityLog::count(),
+        $summary = Cache::remember('security-center:summary', now()->addSeconds(15), function () {
+            return [
+                'activity' => ActivityLog::count(),
+                'recent_logins' => UserLoginHistory::where('login_time', '>=', now()->subDays(7))->count(),
+                'open_security_events' => SecurityEvent::where('status', '!=', 'resolved')->count(),
+                'critical_security_events' => SecurityEvent::where('severity', 'critical')->where('status', '!=', 'resolved')->count(),
+            ];
+        });
 
-            'recent_logins' => UserLoginHistory::where(
-                'login_time',
-                '>=',
-                now()->subDays(7)
-            )->count(),
-
-            'open_security_events' => SecurityEvent::where(
-                'status',
-                '!=',
-                'resolved'
-            )->count(),
-
-            'critical_security_events' => SecurityEvent::where(
-                'severity',
-                'critical'
-            )
-                ->where('status', '!=', 'resolved')
-                ->count(),
-        ];
-
-        return Inertia::render(
-            'Admin/Security/Index',
-            [
-                'activityLogs' => $activityLogs,
-                'loginHistory' => $loginHistory,
-                'securityEvents' => $securityEvents,
-                'summary' => $summary,
-                'tab' => $tab,
-                'search' => $search,
-                'severity' => $severity,
-                'status' => $status,
-            ]
-        );
+        return Inertia::render('Admin/Security/Index', [
+            'activityLogs' => $activityLogs,
+            'loginHistory' => $loginHistory,
+            'securityEvents' => $securityEvents,
+            'summary' => $summary,
+            'tab' => $tab,
+            'search' => $search,
+            'severity' => $severity,
+            'status' => $status,
+        ]);
     }
 
     public function resolve(Request $request, SecurityEvent $securityEvent)
     {
         $admin = Auth::user();
 
-        abort_unless(
-            $admin?->staff?->is_admin,
-            403,
-            'Unauthorized access.'
-        );
+        abort_unless($admin?->staff?->is_admin, 403, 'Unauthorized access.');
 
-        DB::transaction(function () use (
-            $securityEvent,
-            $admin,
-            $request
-        ) {
+        DB::transaction(function () use ($securityEvent, $admin, $request) {
             $securityEvent->update([
                 'status' => 'resolved',
                 'resolved_at' => now(),
@@ -165,19 +170,15 @@ class SecurityCenterController extends Controller
             ActivityLog::create([
                 'user_id' => $admin->id,
                 'action_type' => 'security_event_resolved',
-                'description' => sprintf(
-                    'Resolved security event: %s',
-                    $securityEvent->event_type
-                ),
+                'description' => sprintf('Resolved security event: %s', $securityEvent->event_type),
                 'module' => 'Security Center',
                 'record_id' => $securityEvent->id,
                 'ip_address' => $request->ip(),
             ]);
         });
 
-        return back()->with(
-            'success',
-            'Security event marked as resolved.'
-        );
+        Cache::forget('security-center:summary');
+
+        return back()->with('success', 'Security event marked as resolved.');
     }
 }

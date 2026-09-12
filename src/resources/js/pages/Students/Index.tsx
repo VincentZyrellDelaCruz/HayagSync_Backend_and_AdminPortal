@@ -46,40 +46,22 @@ export default function StudentsIndex({ students, sections, grades, search, grad
             (item) => item.grade_level === gradeValue,
         );
     }, [sections, gradeValue]);
-    const applyFilters = (
-        nextSearch: string,
-        nextGrade: string,
-        nextSection: string,
-    ) => {
+
+    const applyFilters = (nextSearch: string, nextGrade: string, nextSection: string) => {
         const params: Record<string, string> = {};
-
-        if (nextSearch.trim() !== '') {
-            params.search = nextSearch.trim();
-        }
-
-        if (nextGrade !== '') {
-            params.grade = nextGrade;
-        }
-
-        if (
-            nextSection !== '' &&
-            nextGrade !== ALUMNI_VALUE
-        ) {
-            params.section = nextSection;
-        }
+        if (nextSearch.trim() !== '') params.search = nextSearch.trim();
+        if (nextGrade !== '') params.grade = nextGrade;
+        if (nextSection !== '' && nextGrade !== ALUMNI_VALUE) params.section = nextSection;
 
         setIsSearching(true);
 
-        router.get(
-            route('web.students.index'),
-            params,
-            {
-                preserveState: true,
-                preserveScroll: true,
-                replace: true,
-                onFinish: () => setIsSearching(false),
-            },
-        );
+        router.get(route('web.students.index'), params, {
+            only: ['students', 'search', 'grade', 'section'],
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+            onFinish: () => setIsSearching(false),
+        });
     };
 
     useEffect(() => {
@@ -126,11 +108,11 @@ export default function StudentsIndex({ students, sections, grades, search, grad
     |--------------------------------------------------------------------------
     */
     const clearFilters = () => {
+        const hadSearch = searchValue.trim() !== '';
         setSearchValue('');
         setGradeValue('');
         setSectionValue('');
-
-        applyFilters('', '', '');
+        if (!hadSearch) applyFilters('', '', '');
     };
 
     const hasFilters =

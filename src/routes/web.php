@@ -32,7 +32,7 @@ Route::prefix('/otp')->name('otp.')->controller(OtpController::class)->group(fun
     Route::post('/verify', 'verify')->name('verify.submit');
 });
 
-Route::middleware(['auth', 'portal_only'])->group(function () {
+Route::middleware(['auth'])->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['verified'])->name('dashboard');
 

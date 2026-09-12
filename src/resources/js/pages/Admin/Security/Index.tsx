@@ -276,11 +276,11 @@ export default function SecurityCenter({ activityLogs, loginHistory, securityEve
     };
 
     const clearFilters = () => {
+        const hadSearch = searchValue.trim() !== '';
         setSearchValue('');
         setSeverityValue('');
         setStatusValue('');
-
-        applyFilters('', activeTab, '', '');
+        if (!hadSearch) applyFilters('', activeTab, '', '');
     };
 
     const resolveSecurityEvent = () => {

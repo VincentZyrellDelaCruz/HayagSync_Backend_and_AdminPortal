@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\GradeSection;
 use App\Models\Student;
 use App\Models\User;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
@@ -28,7 +27,8 @@ class StudentController extends Controller
 
         $isAdviser = $user->staff && $user->staff->latestPosition?->position_name === 'Teacher';
 
-        $sectionQuery = GradeSection::query();
+        $sectionQuery = GradeSection::query()
+            ->select(['id', 'grade_level', 'section', 'adviser']);
 
         if ($isAdviser) {
             $sectionQuery->where('adviser', $user->staff->user_id);
@@ -39,7 +39,6 @@ class StudentController extends Controller
         }
 
         $sections = $sectionQuery
-            ->select(['id', 'grade_level', 'section'])
             ->orderBy('grade_level')
             ->orderBy('section')
             ->get();
@@ -57,30 +56,51 @@ class StudentController extends Controller
             ->pluck('grade_level')
             ->values();
 
-        $query = Student::query()->with(['latestEnrollment.grade_section']);
+        $query = Student::query()
+            ->select([
+                'id',
+                'student_number',
+                'first_name',
+                'last_name',
+                'middle_name',
+                'suffix',
+                'gender',
+                'birthdate',
+                'email',
+                'phone_number',
+                'status',
+            ])
+            ->with([
+                'latestEnrollment',
+                'latestEnrollment.grade_section:id,school_year_id,grade_level,section,adviser',
+            ]);
 
         if ($isAdviser) {
-            $query->whereHas('latestEnrollment.grade_section', fn ($q) => $q->where('adviser', $user->staff->user_id));
-
-            $query->whereHas('latestEnrollment', fn ($q) => $q->whereNull('ended_at'));
+            $query
+                ->whereHas(
+                    'latestEnrollment.grade_section',
+                    fn ($q) => $q->where('adviser', $user->staff->user_id)
+                )
+                ->whereHas(
+                    'latestEnrollment',
+                    fn ($q) => $q->where('status', 'Enrolled')->whereNull('ended_at')
+                );
         }
 
         if (strtolower($grade) === 'alumni') {
-            $query->whereHas('latestEnrollment', fn ($q) => $q->whereNotNull('ended_at'));
+            $query->whereHas(
+                'latestEnrollment',
+                fn ($q) => $q->whereNotNull('ended_at')
+            );
+
             $section = '';
-        }
-        else {
+        } else {
             $query->whereHas('latestEnrollment', function ($q) use ($grade, $section) {
-                $q->whereNull('ended_at');
+                $q->where('status', 'Enrolled')->whereNull('ended_at');
 
                 $q->whereHas('grade_section', function ($sectionQuery) use ($grade, $section) {
-                    if ($grade !== '') {
-                        $sectionQuery->where('grade_level', $grade);
-                    }
-
-                    if ($section !== '') {
-                        $sectionQuery->where('section', $section);
-                    }
+                    if ($grade !== '') $sectionQuery->where('grade_level', $grade);
+                    if ($section !== '') $sectionQuery->where('section', $section);
                 });
             });
         }
@@ -93,7 +113,11 @@ class StudentController extends Controller
             });
         }
 
-        $students = $query->orderBy('last_name')->orderBy('first_name')->paginate(10)->withQueryString();
+        $students = $query
+            ->orderBy('last_name')
+            ->orderBy('first_name')
+            ->paginate(10)
+            ->withQueryString();
 
         $students->getCollection()->transform(function ($student) {
             $student->latest_section = $student->latestEnrollment?->grade_section;
@@ -124,20 +148,22 @@ class StudentController extends Controller
         $grade = trim($request->get('grade', ''));
         $section = trim($request->get('section', ''));
 
-        // Explicitly deny exact searches for an existing unrelated student ID.
-        if ($search !== '') {
-            $unrelatedStudentExists = Student::query()
-                ->where('student_number', $search)
-                ->whereDoesntHave('parent_guardians', fn ($q) => $q->where('parent_guardians.user_id', $user->id))
-                ->exists();
-
-            if ($unrelatedStudentExists) {
-                abort(403, 'You are not authorized to access this student record.');
-            }
-        }
-
         $catalogStudents = $parent->students()
-            ->with(['latestEnrollment.grade_section'])
+            ->select([
+                'students.id',
+                'students.student_number',
+                'students.first_name',
+                'students.last_name',
+                'students.status',
+            ])
+            ->with([
+                'latestEnrollment',
+                'latestEnrollment.grade_section:id,school_year_id,grade_level,section,adviser',
+            ])
+            ->whereHas(
+                'latestEnrollment',
+                fn ($q) => $q->where('status', 'Enrolled')->whereNull('ended_at')
+            )
             ->get();
 
         $sectionModels = $catalogStudents
@@ -155,26 +181,49 @@ class StudentController extends Controller
 
         $grades = $catalogStudents
             ->map(fn ($student) => $student->latestEnrollment?->grade_section?->grade_level)
-            ->filter()->unique()->sort()->values();
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
 
-        $query = $parent->students()->with(['latestEnrollment.grade_section']);
+        /*
+         * The query is already scoped through the authenticated parent's
+         * student relationship, so a separate global student-existence
+         * lookup is unnecessary.
+         */
+        $query = $parent->students()
+            ->select([
+                'students.id',
+                'students.student_number',
+                'students.first_name',
+                'students.last_name',
+                'students.middle_name',
+                'students.suffix',
+                'students.gender',
+                'students.birthdate',
+                'students.email',
+                'students.phone_number',
+                'students.status',
+            ])
+            ->with([
+                'latestEnrollment',
+                'latestEnrollment.grade_section:id,school_year_id,grade_level,section',
+            ]);
 
         if (strtolower($grade) === 'alumni') {
-            $query->whereHas('latestEnrollment', fn ($q) => $q->whereNotNull('ended_at'));
+            $query->whereHas(
+                'latestEnrollment',
+                fn ($q) => $q->whereNotNull('ended_at')
+            );
+
             $section = '';
-        }
-        else {
+        } else {
             $query->whereHas('latestEnrollment', function ($q) use ($grade, $section) {
-                $q->whereNull('ended_at');
+                $q->where('status', 'Enrolled')->whereNull('ended_at');
 
                 $q->whereHas('grade_section', function ($sectionQuery) use ($grade, $section) {
-                    if ($grade !== '') {
-                        $sectionQuery->where('grade_level', $grade);
-                    }
-
-                    if ($section !== '') {
-                        $sectionQuery->where('section', $section);
-                    }
+                    if ($grade !== '') $sectionQuery->where('grade_level', $grade);
+                    if ($section !== '') $sectionQuery->where('section', $section);
                 });
             });
         }
@@ -187,7 +236,11 @@ class StudentController extends Controller
             });
         }
 
-        $students = $query->orderBy('last_name')->orderBy('first_name')->paginate(10)->withQueryString();
+        $students = $query
+            ->orderBy('last_name')
+            ->orderBy('first_name')
+            ->paginate(10)
+            ->withQueryString();
 
         $students->getCollection()->transform(function ($student) {
             $student->latest_section = $student->latestEnrollment?->grade_section;
@@ -216,7 +269,11 @@ class StudentController extends Controller
 
         // Parent/guardian receives a deliberately limited student view.
         if ($user->parent_guardian && !$user->staff) {
-            $student->load(['latestEnrollment.grade_section.school_year']);
+            $student->load([
+                'latestEnrollment',
+                'latestEnrollment.grade_section:id,school_year_id,grade_level,section',
+                'latestEnrollment.grade_section.school_year:id,school_year',
+            ]);
 
             return Inertia::render('Students/ParentStudentInfo', compact('student'));
         }
