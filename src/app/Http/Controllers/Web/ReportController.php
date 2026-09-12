@@ -40,27 +40,22 @@ class ReportController extends Controller
 
         $selectedStatus = $req->query('status', 'all');
         $selectedCategory = $req->query('category', 'all');
+        $search = trim((string) $req->query('search', ''));
 
         $categories = Cache::remember('reports:active_categories', now()->addMinutes(5), fn () =>
-            IncidentCategory::where('is_active', true)->orderBy('category_name')->get()
+            IncidentCategory::query()->where('is_active', true)->orderBy('category_name')->get(['id', 'category_name', 'description'])
         );
 
         $authStaff = $authUser?->staff;
-
         abort_unless($authStaff, 403, 'Staff access required.');
 
         $isAdmin = (bool) $authStaff->is_admin;
         $staffLevel = $this->staffLevel($authStaff);
 
-        $reportsQuery = Report::with([
-            'user',
-            'current_status',
-            'category',
-            'latest_assignment.staff_assigned_to.user',
-        ]);
+        $applyVisibility = function ($query) use ($authStaff, $staffLevel, $isAdmin) {
+            if ($isAdmin) return;
 
-        if (!$isAdmin) {
-            $reportsQuery->where(function ($query) use ($authStaff, $staffLevel) {
+            $query->where(function ($query) use ($authStaff, $staffLevel) {
                 $query->whereHas('report_assignments', fn ($assignmentQuery) =>
                     $assignmentQuery->where('assigned_to', $authStaff->getKey())
                 );
@@ -79,22 +74,48 @@ class ReportController extends Controller
 
                 if ($staffLevel === 1) {
                     $query->orWhere(function ($teacherQuery) use ($authStaff) {
-                        $teacherQuery
-                            ->whereHas('current_status', fn ($statusQuery) => $statusQuery->where('status_name', 'Pending'))
-                            ->whereDoesntHave('latest_assignment', fn ($assignmentQuery) => $assignmentQuery->where('level', '1'))
-                            ->whereHas('students', function ($studentQuery) use ($authStaff) {
-                                $studentQuery
-                                    ->whereIn('report_student.involvement_type', ['victim', 'Victim', 'target', 'Target'])
-                                    ->whereHas('grade_sections', fn ($sectionQuery) =>
-                                        $sectionQuery
-                                            ->where('adviser', $authStaff->getKey())
-                                            ->whereNull('enrollments.ended_at')
-                                    );
-                            });
+                        $teacherQuery->whereHas('students', function ($studentQuery) use ($authStaff) {
+                            $studentQuery
+                                ->whereIn('report_student.involvement_type', ['victim', 'Victim', 'target', 'Target'])
+                                ->whereHas('grade_sections', fn ($sectionQuery) =>
+                                    $sectionQuery
+                                        ->where('adviser', $authStaff->getKey())
+                                        ->where('enrollments.status', 'Enrolled')
+                                        ->whereNull('enrollments.ended_at')
+                                );
+                        });
                     });
                 }
             });
+        };
+
+        $baseQuery = Report::query();
+        $applyVisibility($baseQuery);
+
+        $allVisibleCount = (clone $baseQuery)->count();
+
+        $statusCountRows = (clone $baseQuery)
+            ->join('report_statuses', 'reports.current_status_id', '=', 'report_statuses.id')
+            ->select('report_statuses.status_name')
+            ->selectRaw('COUNT(reports.id) AS total')
+            ->groupBy('report_statuses.status_name')
+            ->get();
+
+        $statusCounts = collect(['all' => $allVisibleCount]);
+
+        foreach ($statusCountRows as $row) {
+            $statusCounts[(string) $row->status_name] = (int) $row->total;
         }
+
+        $reportsQuery = Report::with([
+            'user:id,first_name,last_name',
+            'current_status:id,status_name',
+            'category:id,category_name',
+            'latest_assignment:id,report_id,assigned_to,assigned_by,level,assigned_at,ended_at',
+            'latest_assignment.staff_assigned_to.user:id,first_name,last_name',
+        ]);
+
+        $applyVisibility($reportsQuery);
 
         if ($selectedStatus !== 'all') {
             $reportsQuery->whereHas('current_status', fn ($query) => $query->where('status_name', $selectedStatus));
@@ -104,27 +125,58 @@ class ReportController extends Controller
             $reportsQuery->where('category_id', $selectedCategory);
         }
 
-        $reports = $reportsQuery->latest('created_at')->paginate(10)->withQueryString();
+        if ($search !== '') {
+            $term = "%{$search}%";
+
+            $reportsQuery->where(function ($query) use ($term) {
+                $query
+                    ->where('reports.report_code', 'ilike', $term)
+                    ->orWhere('reports.incident_title', 'ilike', $term)
+                    ->orWhere('reports.description', 'ilike', $term)
+                    ->orWhere('reports.location', 'ilike', $term)
+                    ->orWhereHas('user', fn ($userQuery) =>
+                        $userQuery
+                            ->where('first_name', 'ilike', $term)
+                            ->orWhere('last_name', 'ilike', $term)
+                    );
+            });
+        }
+
+        // Urgent safety reports are always placed before non-urgent reports.
+        $reports = $reportsQuery
+            ->orderByRaw("CASE WHEN reports.urgent_safety_flag IS TRUE THEN 0 ELSE 1 END")
+            ->latest('reports.created_at')
+            ->paginate(10)
+            ->withQueryString();
 
         $reports->getCollection()->transform(function ($report) use ($authUser) {
             $assignment = $report->latest_assignment;
+
             $report->current_level = $assignment ? (int) $assignment->level : null;
             $report->current_assignee = $assignment?->staff_assigned_to;
-            $report->can_act = $this->canActOnReport($authUser, $report);
-            $report->read_only = !$report->can_act;
+
+            // Existing assigned-handler logic remains authoritative.
+            // The additional helper only covers an unassigned pending report that is
+            // legitimately visible/actionable by the Teacher/Section Adviser.
+            $canAct = $this->canActOnReport($authUser, $report) || $this->canActAsUnassignedAdviser($authUser, $report);
+
+            $report->can_act = $canAct;
+            $report->read_only = !$canAct;
 
             return $report;
         });
 
         $statuses = ['all', 'Pending', 'Under Investigation', 'Scheduled', 'Escalated', 'Resolved', 'Dismissed'];
 
-        return Inertia::render('Reports/Index', compact(
-            'reports',
-            'categories',
-            'statuses',
-            'selectedStatus',
-            'selectedCategory'
-        ));
+        return Inertia::render('Reports/Index', [
+            'reports' => $reports,
+            'categories' => $categories,
+            'statuses' => $statuses,
+            'selectedStatus' => $selectedStatus,
+            'selectedCategory' => $selectedCategory,
+            'search' => $search,
+            'statusCounts' => $statusCounts,
+        ]);
     }
 
     private function parentIndex(Request $req)
@@ -144,11 +196,7 @@ class ReportController extends Controller
 
         $reports->getCollection()->transform(function ($report) {
             $victim = $report->students->first(fn ($student) =>
-                in_array(
-                    strtolower((string) $student->pivot->involvement_type),
-                    ['victim', 'target'],
-                    true
-                )
+                in_array(strtolower((string) $student->pivot->involvement_type), ['victim', 'target'], true)
             );
 
             $report->parent_student = $victim ? [
@@ -163,22 +211,41 @@ class ReportController extends Controller
         return Inertia::render('Reports/ParentIndex', compact('reports'));
     }
 
+    private function canActAsUnassignedAdviser(User $user, Report $report): bool
+    {
+        $staff = $user->staff;
+
+        if (!$staff || $staff->is_admin || $this->staffLevel($staff) !== 1) return false;
+        if ($report->latest_assignment || $report->current_status?->status_name !== 'Pending') return false;
+
+        $report->loadMissing(['students.grade_sections']);
+
+        return $report->students->contains(function ($student) use ($staff) {
+            $involvement = strtolower((string) $student->pivot->involvement_type);
+
+            if (!in_array($involvement, ['victim', 'target'], true)) return false;
+
+            return $student->grade_sections->contains(
+                fn ($section) =>
+                    (string) $section->adviser === (string) $staff->getKey()
+                    && (string) ($section->pivot?->status ?? 'Enrolled') === 'Enrolled'
+                    && $section->pivot?->ended_at === null
+            );
+        });
+    }
+
     public function create()
     {
         $user = Auth::user();
 
-        abort_unless($user?->parent_guardian && !$user->staff, 403,
-            'Parent/guardian access required.'
-        );
+        abort_unless($user?->parent_guardian && !$user->staff, 403, 'Parent/guardian access required.');
 
         $categories = IncidentCategory::query()->where('is_active', true)
             ->whereNull('deleted_at')->orderBy('category_name')
             ->get(['id', 'category_name', 'description']);
 
         $relatedStudents = $user->parent_guardian->students()
-            ->whereHas('enrollments', function ($query) {
-                $query->where('status', 'Enrolled')->whereNull('ended_at');
-            })
+            ->whereHas('enrollments', fn ($query) => $query->where('status', 'Enrolled')->whereNull('ended_at'))
             ->with(['activeEnrollment.grade_section'])
             ->orderBy('last_name')->orderBy('first_name')->get()
             ->map(function ($student) {
@@ -207,11 +274,7 @@ class ReportController extends Controller
     {
         $user = Auth::user();
 
-        abort_unless(
-            $user?->parent_guardian && !$user->staff,
-            403,
-            'Parent/guardian access required.'
-        );
+        abort_unless($user?->parent_guardian && !$user->staff, 403, 'Parent/guardian access required.');
 
         $validated = $req->validate([
             'q' => ['required', 'string', 'min:2', 'max:100'],
@@ -227,10 +290,7 @@ class ReportController extends Controller
                     ->orWhere('first_name', 'like', "%{$search}%")
                     ->orWhere('last_name', 'like', "%{$search}%");
             })
-            ->whereHas(
-                'latestEnrollment',
-                fn ($query) => $query->where('status', 'Enrolled')->whereNull('ended_at')
-            )
+            ->whereHas('latestEnrollment', fn ($query) => $query->where('status', 'Enrolled')->whereNull('ended_at'))
             ->orderBy('last_name')
             ->orderBy('first_name')
             ->limit(8)
@@ -255,8 +315,6 @@ class ReportController extends Controller
 
         abort_unless($user?->parent_guardian && !$user->staff, 403, 'Parent/guardian access required.');
 
-        $validated = $req->validated();
-
         $report = DB::transaction(function () use ($validated, $user, $req, $evidenceVerificationService) {
             $pendingStatus = ReportStatus::where('status_name', 'Pending')->firstOrFail();
 
@@ -267,9 +325,7 @@ class ReportController extends Controller
                 'current_status_id' => $pendingStatus->id,
                 'incident_title' => trim($validated['incident_title']),
                 'description' => trim($validated['description']),
-                'location' => filled($validated['location'] ?? null)
-                    ? trim($validated['location'])
-                    : null,
+                'location' => filled($validated['location'] ?? null) ? trim($validated['location']) : null,
                 'incident_date' => $validated['incident_date'],
                 'incident_time' => $validated['incident_time'] ?? null,
                 'urgent_safety_flag' => null,
@@ -306,7 +362,6 @@ class ReportController extends Controller
                 $storedName = Str::uuid() . '.' . strtolower($file->getClientOriginalExtension());
                 $path = $file->storeAs("evidences/{$fileType}", $storedName, 'public');
                 $hash = hash_file('sha256', $file->getRealPath());
-
                 $verification = $evidenceVerificationService->verify($file);
 
                 $report->report_evidences()->create([
@@ -335,10 +390,7 @@ class ReportController extends Controller
             return $report;
         });
 
-        AssessReportUrgency::dispatch(
-            $report->id,
-            $req->ip() ?: '0.0.0.0'
-        )->afterCommit();
+        AssessReportUrgency::dispatch($report->id, $req->ip() ?: '0.0.0.0')->afterCommit();
 
         return redirect()->route('web.reports.index')
             ->with('success', 'Your incident report was submitted successfully. The school will review it and determine the appropriate handling.');
@@ -360,7 +412,8 @@ class ReportController extends Controller
 
         if ($authUser?->parent_guardian && !$authUser->staff) {
             abort_unless(
-                $this->canViewReport($authUser, $report), 403,
+                $this->canViewReport($authUser, $report),
+                403,
                 'You are not authorized to view this incident.'
             );
 
@@ -372,9 +425,7 @@ class ReportController extends Controller
                 'report_evidences',
             ]);
 
-            $report->students->each(function ($student) {
-                $student->pivot->notes = null;
-            });
+            $report->students->each(fn ($student) => $student->pivot->notes = null);
 
             $report->current_level = null;
             $report->current_assignee = null;
@@ -411,21 +462,108 @@ class ReportController extends Controller
             'report_assignments.staff_assigned_by.user',
         ]);
 
-        $assignment = $report->latest_assignment;
+        // Change Pending/Escalated to Under Investigation only when the
+        // current assigned handler actually opens the report.
+        $this->beginInvestigation($report);
 
+        // Refresh the status relation because beginInvestigation() may have
+        // changed the current_status_id during this request.
+        $report->loadMissing('current_status');
+
+        $assignment = $report->latest_assignment;
         $report->current_level = $assignment ? (int) $assignment->level : null;
         $report->current_assignee = $assignment?->staff_assigned_to;
         $report->can_act = $this->canActOnReport(Auth::user(), $report);
         $report->read_only = !$report->can_act;
 
-        $statuses = Cache::remember('reports:action_statuses',
+        $statuses = Cache::remember(
+            'reports:action_statuses',
             now()->addMinutes(5),
-            fn () => ReportStatus::whereIn(
-                'status_name', ['Scheduled', 'Escalated', 'Resolved', 'Dismissed']
-            )->get()
+            fn () => ReportStatus::whereIn('status_name', ['Scheduled', 'Escalated', 'Resolved', 'Dismissed'])->get()
         );
 
         return Inertia::render('Reports/Report', compact('report', 'statuses'));
+    }
+
+    /**
+     * Change a report from Pending/Escalated to Under Investigation
+     * when the currently assigned handler opens the report.
+     *
+     * This does not affect read-only viewers.
+     */
+    private function beginInvestigation(Report $report): void
+    {
+        $currentStatus = $report->current_status?->status_name;
+
+        if (!in_array($currentStatus, ['Pending', 'Escalated'], true)) {
+            return;
+        }
+
+        $user = Auth::user();
+
+        if (!$user || !$this->canActOnReport($user, $report)) {
+            return;
+        }
+
+        DB::transaction(function () use ($report, $user) {
+            $lockedReport = Report::query()
+                ->with(['current_status', 'latest_assignment'])
+                ->lockForUpdate()
+                ->find($report->id);
+
+            if (!$lockedReport) return;
+
+            $statusName = $lockedReport->current_status?->status_name;
+
+            // Prevent duplicate transitions when multiple requests/tabs open the same report.
+            if (!in_array($statusName, ['Pending', 'Escalated'], true)) {
+                return;
+            }
+
+            if (!$this->canActOnReport($user, $lockedReport)) {
+                return;
+            }
+
+            $underInvestigation = Cache::remember(
+                'reports:under_investigation_status',
+                now()->addHour(),
+                fn () => ReportStatus::where('status_name', 'Under Investigation')->first()
+            );
+
+            if (!$underInvestigation) {
+                return;
+            }
+
+            $previousStatus = $statusName;
+
+            $lockedReport->update([
+                'current_status_id' => $underInvestigation->id,
+            ]);
+
+            $lockedReport->report_updates()->create([
+                'updated_by' => $user->id,
+                'status_id' => $underInvestigation->id,
+                'note' => $previousStatus === 'Escalated'
+                    ? 'The assigned handler opened the escalated incident and began investigation.'
+                    : 'The assigned handler opened the incident and began investigation.',
+            ]);
+
+            ActivityLog::create([
+                'user_id' => $user->id,
+                'action_type' => 'report_investigation_started',
+                'description' => sprintf(
+                    'Started investigation for report %s. Previous status: %s.',
+                    $lockedReport->report_code ?? $lockedReport->id,
+                    $previousStatus
+                ),
+                'module' => 'reports',
+                'record_id' => $lockedReport->id,
+                'ip_address' => request()->ip(),
+            ]);
+
+            $report->setRelation('current_status', $underInvestigation);
+            $report->current_status_id = $underInvestigation->id;
+        });
     }
 
     public function streamEvidence(string $id)
@@ -439,7 +577,6 @@ class ReportController extends Controller
         abort_unless($isStaff || $isParentOwner, 403, 'You are not authorized to access this evidence.');
 
         $path = Storage::disk('public')->path($evidence->file_path);
-
         abort_unless(is_file($path), 404);
 
         $mimeType = $evidence->mime_type ?: Storage::disk('public')->mimeType($evidence->file_path) ?: 'application/octet-stream';
@@ -471,12 +608,10 @@ class ReportController extends Controller
         abort_unless($nextStaff, 422, 'No eligible staff member is available for the next escalation level.');
 
         $escalatedStatus = ReportStatus::where('status_name', 'Escalated')->firstOrFail();
-
         $staff = Auth::user()->staff;
 
         DB::transaction(function () use ($report, $nextStaff, $nextLevel, $validated, $escalatedStatus, $staff) {
             $currentAssignment = $report->latest_assignment;
-
             $now = now();
 
             $currentAssignment->update(['ended_at' => $now]);
@@ -500,7 +635,12 @@ class ReportController extends Controller
             ActivityLog::create([
                 'user_id' => Auth::user()->id,
                 'action_type' => 'report_escalated',
-                'description' => sprintf('Escalated report %s from level %s to level %s.', $report->report_code ?? $report->id, $currentAssignment->level, $nextLevel),
+                'description' => sprintf(
+                    'Escalated report %s from level %s to level %s.',
+                    $report->report_code ?? $report->id,
+                    $currentAssignment->level,
+                    $nextLevel
+                ),
                 'module' => 'reports',
                 'record_id' => $report->id,
                 'ip_address' => request()->ip(),
@@ -516,10 +656,7 @@ class ReportController extends Controller
                 'Incident report %s has been escalated to your level for review.',
                 $report->report_code ?? $report->id
             ),
-            actionUrl: route(
-                'web.reports.show',
-                $report->id
-            ),
+            actionUrl: route('web.reports.show', $report->id),
             sender: $staff->user,
             priority: 'high',
             data: [
@@ -559,7 +696,6 @@ class ReportController extends Controller
         }
 
         $resolvedStatus = ReportStatus::where('status_name', 'Resolved')->firstOrFail();
-
         $staff = Auth::user()->staff;
 
         DB::transaction(function () use ($report, $resolvedStatus, $validated, $offender, $currentLevel, $staff) {
@@ -586,7 +722,11 @@ class ReportController extends Controller
             ActivityLog::create([
                 'user_id' => Auth::user()->id,
                 'action_type' => 'report_resolved',
-                'description' => sprintf('Resolved report %s at escalation level %s.', $report->report_code ?? $report->id, $currentLevel),
+                'description' => sprintf(
+                    'Resolved report %s at escalation level %s.',
+                    $report->report_code ?? $report->id,
+                    $currentLevel
+                ),
                 'module' => 'reports',
                 'record_id' => $report->id,
                 'ip_address' => request()->ip(),
@@ -669,9 +809,7 @@ class ReportController extends Controller
             foreach ($validated['participant_ids'] ?? [] as $studentId) {
                 $student = $report->students()->where('students.id', $studentId)->first();
 
-                if (!$student) {
-                    continue;
-                }
+                if (!$student) continue;
 
                 MeetingParticipant::create([
                     'meeting_id' => $meeting->id,
@@ -737,9 +875,7 @@ class ReportController extends Controller
         if (!$position) return null;
 
         return Staff::with('positions')
-            ->whereHas('positions', function ($query) use ($position) {
-                $query->where('position_name', $position);
-            })
+            ->whereHas('positions', fn ($query) => $query->where('position_name', $position))
             ->orderBy('staff_number')
             ->get()
             ->first(fn ($staff) => $this->staffLevel($staff) === $level);
@@ -787,7 +923,11 @@ class ReportController extends Controller
 
         foreach ($orderedStudents as $student) {
             foreach ($student->grade_sections as $gradeSection) {
-                if ($gradeSection->pivot?->ended_at !== null || !$gradeSection->adviser) {
+                if (
+                    $gradeSection->pivot?->ended_at !== null ||
+                    ($gradeSection->pivot?->status ?? 'Enrolled') !== 'Enrolled' ||
+                    !$gradeSection->adviser
+                ) {
                     continue;
                 }
 
@@ -817,22 +957,27 @@ class ReportController extends Controller
         $staff = $user?->staff;
 
         if (!$staff) return false;
-
         if ($staff->is_admin) return true;
 
         $staffId = $staff->getKey();
 
+        // Current or previous assigned handlers can always view the report.
         if ($report->report_assignments()->where('assigned_to', $staffId)->exists()) {
             return true;
         }
 
+        $staffLevel = $this->staffLevel($staff);
         $level = (int) ($report->latest_assignment?->level ?? 0);
 
-        if ($this->staffLevel($staff) === 2 && $level === 1) {
+        // Principal can view reports currently handled at Teacher/Level 1.
+        if ($staffLevel === 2 && $level === 1) {
             return true;
         }
 
-        if ($this->staffLevel($staff) === 1 && $level === 0 && $report->current_status?->status_name === 'Pending') {
+        // Teacher/Section Adviser can view any report involving a victim/target
+        // who is currently enrolled in a section currently advised by this teacher.
+        // This remains view-only when another escalation level is handling the report.
+        if ($staffLevel === 1) {
             $report->loadMissing(['students.grade_sections']);
 
             return $report->students->contains(function ($student) use ($staffId) {
@@ -843,7 +988,10 @@ class ReportController extends Controller
                 }
 
                 return $student->grade_sections->contains(
-                    fn ($section) => (string) $section->adviser === (string) $staffId && $section->pivot?->ended_at === null
+                    fn ($section) =>
+                        (string) $section->adviser === (string) $staffId
+                        && (string) ($section->pivot?->status ?? 'Enrolled') === 'Enrolled'
+                        && $section->pivot?->ended_at === null
                 );
             });
         }
@@ -859,7 +1007,11 @@ class ReportController extends Controller
 
         $assignment = $report->latest_assignment;
 
-        if (!$assignment || $assignment->ended_at !== null || (string) $assignment->assigned_to !== (string) $staff->getKey()) {
+        if (
+            !$assignment ||
+            $assignment->ended_at !== null ||
+            (string) $assignment->assigned_to !== (string) $staff->getKey()
+        ) {
             return false;
         }
 
@@ -869,7 +1021,9 @@ class ReportController extends Controller
     private function authorizeCurrentHandler(Report $report, ?ReportAssignment $assignment): void
     {
         abort_unless(
-            $assignment && $assignment->ended_at === null && $this->canActOnReport(Auth::user(), $report),
+            $assignment &&
+            $assignment->ended_at === null &&
+            $this->canActOnReport(Auth::user(), $report),
             403,
             'You are not authorized to perform this action on the current incident handler level.'
         );
